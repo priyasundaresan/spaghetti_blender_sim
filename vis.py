@@ -4,8 +4,10 @@ import os
 
 def overlay_pusher(image, annots):
     pusher_pixel = annots[0]
-    hull_pixels = annots[1:]
-    cv2.circle(image, tuple(pusher_pixel), 5, (255,255,0), -1)
+    hull_pixels = annots[1:-1]
+    densest_pixel = annots[-1]
+    cv2.circle(image, tuple(pusher_pixel), 3, (255,255,0), -1)
+    cv2.circle(image, tuple(densest_pixel), 3, (255,0,0), -1)
     for px in hull_pixels:
         cv2.circle(image, tuple(px), 3, (0,0,255), -1)
     return img

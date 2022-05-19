@@ -106,7 +106,7 @@ def make_table(params):
     table = bpy.context.object
     table.rigid_body.type = 'PASSIVE'
     #table.rigid_body.friction = 1.2
-    table.rigid_body.friction = 2.0
+    table.rigid_body.friction = 1.8
     bpy.ops.object.modifier_add(type='COLLISION')
     bpy.ops.object.select_all(action='DESELECT')
 
@@ -158,13 +158,19 @@ def add_softbody_physics(noodles):
     bpy.context.object.data.bevel_mode = 'OBJECT'
 
     bpy.ops.object.select_all(action='DESELECT')
+
+    #noodles.modifiers["Softbody"].settings.step_max = 250
+
     return noodles
 
-def annotate(points, render_size=(150,150)):
+def annotate(points):
+    scene = bpy.context.scene
+    render_width = scene.render.resolution_x 
+    render_height = scene.render.resolution_y 
     pixels = []
     for pt in points:
         camera_coord = bpy_extras.object_utils.world_to_camera_view(bpy.context.scene, bpy.context.scene.camera, Vector(pt))
-        pixel = [round(camera_coord.x * render_size[0]), round(render_size[1] - camera_coord.y * render_size[1])]
+        pixel = [round(camera_coord.x * render_width), round(render_height - camera_coord.y * render_height)]
         pixels.append(pixel)
     return pixels
 
@@ -174,6 +180,8 @@ def make_noodle():
     rotation = np.array([np.random.uniform(-0.02, 0.02),np.random.uniform(-0.02, 0.02),np.random.uniform(0, np.pi)])
     bpy.ops.curve.primitive_nurbs_path_add(radius=1.0, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(1,1,1))
     bpy.ops.object.editmode_toggle()
+
+    #bpy.ops.curve.subdivide(number_cuts=2) 
     bpy.ops.curve.subdivide(number_cuts=3) 
     bpy.ops.object.editmode_toggle()
     path = bpy.context.object
@@ -227,7 +235,8 @@ def delete_objs(objs):
 
 
 def push(pusher, start_frame, push_duration, lift_duration, push_start_2d, push_end_2d, hull_2d, densest_3d, annot_dir='annots'):
-    push_end_2d = densest_3d[:-1]
+    #push_end_2d = densest_3d[:-1]
+    push_end_2d = [0,0]
 
     offset = push_end_2d - push_start_2d
     angle = np.arctan(offset[1]/offset[0])
@@ -258,7 +267,13 @@ def push(pusher, start_frame, push_duration, lift_duration, push_start_2d, push_
 
     return start_frame+push_duration
 
-def twirl(fork, start_frame, settle_duration, down_duration, twirl_duration, scoop_duration, twirl_start_3d, angle, annot_dir='annots'):
+def wait(start_frame, wait_duration):
+    for step in range(start_frame, start_frame+wait_duration):
+        bpy.context.scene.frame_set(step)
+        render(step-30)
+    return start_frame+wait_duration
+
+def twirl(fork, start_frame, down_duration, twirl_duration, scoop_duration, twirl_start_3d, angle, annot_dir='annots'):
     x,y,z = twirl_start_3d
 
     fork.location = (x,y,2.0)
@@ -268,24 +283,24 @@ def twirl(fork, start_frame, settle_duration, down_duration, twirl_duration, sco
 
     fork.location = (x,y,0.5)
     fork.rotation_euler = (0,0,angle)
-    fork.keyframe_insert(data_path="location", frame=start_frame+settle_duration+down_duration)
-    fork.keyframe_insert(data_path="rotation_euler", frame=start_frame+settle_duration+down_duration)
+    fork.keyframe_insert(data_path="location", frame=start_frame+down_duration)
+    fork.keyframe_insert(data_path="rotation_euler", frame=start_frame+down_duration)
 
     fork.location = (x,y,0.5)
-    fork.rotation_euler = (0,0,angle+4*np.pi)
-    fork.keyframe_insert(data_path="location", frame=start_frame+settle_duration+down_duration+twirl_duration)
-    fork.keyframe_insert(data_path="rotation_euler", frame=start_frame+settle_duration+down_duration+twirl_duration)
+    fork.rotation_euler = (0,0,angle+6*np.pi)
+    fork.keyframe_insert(data_path="location", frame=start_frame+down_duration+twirl_duration)
+    fork.keyframe_insert(data_path="rotation_euler", frame=start_frame+down_duration+twirl_duration)
 
     fork.location = (x,y,2.0)
-    fork.rotation_euler = (0,np.pi/2,angle+4*np.pi)
-    fork.keyframe_insert(data_path="location", frame=start_frame+settle_duration+down_duration+twirl_duration+scoop_duration)
-    fork.keyframe_insert(data_path="rotation_euler", frame=start_frame+settle_duration+down_duration+twirl_duration+scoop_duration)
+    fork.rotation_euler = (0,np.pi/2,angle+6*np.pi)
+    fork.keyframe_insert(data_path="location", frame=start_frame+down_duration+twirl_duration+scoop_duration)
+    fork.keyframe_insert(data_path="rotation_euler", frame=start_frame+down_duration+twirl_duration+scoop_duration)
 
-    #for step in range(start_frame, start_frame+settle_duration+down_duration+twirl_duration+scoop_duration):
-    #    bpy.context.scene.frame_set(step)
-    #    pixels = annotate([twirl_start_3d])
-    #    render(step-30)
-    #    np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
+    for step in range(start_frame, start_frame+down_duration+twirl_duration+scoop_duration):
+        bpy.context.scene.frame_set(step)
+        pixels = annotate([twirl_start_3d])
+        render(step-30)
+        np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
 
 def densest_point(noodles):
     start = time.time()
@@ -357,15 +372,15 @@ def densest_point_angle(noodles):
 def reset_pusher(pusher, frame):
     pusher.location = (0,0,15)
     pusher.rotation_euler = (0,np.pi/2,0)
-    pusher.rigid_body.kinematic = False
+    #pusher.rigid_body.kinematic = False
     #pusher.keyframe_insert(data_path="location", frame=frame)
     #pusher.keyframe_insert(data_path="rotation_euler", frame=frame)
 
 def reset_fork(fork, frame):
     fork.location = (0,0,15)
     fork.rotation_euler = (0,0,0)
-    fork.keyframe_insert(data_path="location", frame=frame)
-    fork.keyframe_insert(data_path="rotation_euler", frame=frame)
+    #fork.keyframe_insert(data_path="location", frame=frame)
+    #fork.keyframe_insert(data_path="rotation_euler", frame=frame)
 
 def noodle_state(noodles):
     points = []
@@ -395,12 +410,40 @@ def noodle_state(noodles):
     
     return hull_points_2d, center_2d, furthest_2d, hull.volume, densest_point(noodles)
 
+def remove_picked_up(noodles):
+    bpy.ops.object.select_all(action='DESELECT')
+    z_thresh = 0.5
+    points = []
+    pickedup_noodle_idxs  = []
+    for curve_idx, curve in enumerate(noodles.data.splines):
+        picked_up = False
+        for point in curve.points:
+            point = noodles.matrix_world@point.co
+            point = point[:3]
+            if point[2]  > z_thresh:
+                picked_up = True
+                break   
+        if picked_up:
+            pickedup_noodle_idxs.append(curve_idx)
+
+    curve_idx = 0
+    for curve_idx in pickedup_noodle_idxs:
+        for point_idx, point in enumerate(noodles.data.splines[curve_idx].points):
+            noodles.data.splines[curve_idx].points[point_idx].select = True
+
+    bpy.ops.object.editmode_toggle()
+    bpy.ops.curve.delete(type='VERT')
+    bpy.ops.object.editmode_toggle()
+    return noodles
+
+
+
 def generate_dataset(episodes):
     
     if not os.path.exists('annots'):
         os.mkdir('annots')
 
-    render_size = (150,150)
+    render_size = (140,140)
     set_render_settings('CYCLES', render_size)
     clear_scene()
     camera = add_camera_light()
@@ -429,15 +472,20 @@ def generate_dataset(episodes):
         areas.append(area)
         start = push(pusher, 30+(i*15), 10, 5, furthest_2d, center_2d, hull_2d, densest_3d)
         i+=1
-    
-
     reset_pusher(pusher, bpy.context.scene.frame_current)
-    #i=0
+
+    start_frame = 30+(i*15)
     freeze_softbody_physics(noodles)
     densest_3d, angle = densest_point_angle(noodles)
     add_softbody_physics(noodles)
     fork = make_fork('assets/fork.stl')
-    twirl(fork, 30+(i*15), 20, 5, 15, 20, densest_3d, angle)
+
+    twirl(fork, 30+start_frame, 5, 20, 20, densest_3d, angle)
+    freeze_softbody_physics(noodles)
+    remove_picked_up(noodles)
+    reset_fork(fork, bpy.context.scene.frame_current)
+
+    wait(30+start_frame+45,30)
 
 if __name__ == '__main__':
     generate_dataset(1)
