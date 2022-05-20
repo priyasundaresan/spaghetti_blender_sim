@@ -95,13 +95,15 @@ def initialize_renderer():
 def render(episode):
     bpy.context.scene.render.filepath = 'masks/%05d.jpg'%episode
     bpy.ops.render.render(write_still=True)
-    pixels = np.array(bpy.data.images['Viewer Node'].pixels)
-    width = bpy.context.scene.render.resolution_x
-    height = bpy.context.scene.render.resolution_y
-    image = pixels.reshape(height,width,4)
+    image = None
+    #bpy.ops.render.render(write_still=False)
+    #pixels = np.array(bpy.data.images['Viewer Node'].pixels)
+    #width = bpy.context.scene.render.resolution_x
+    #height = bpy.context.scene.render.resolution_y
+    #image = pixels.reshape(height,width,4)
     #image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    #cv2.imwrite('test.png', image)
-    #print(image.shape)
+    #cv2.imwrite('masks/%05d.jpg'%episode, image)
+    return image
 
 def make_fork(path_to_fork_stl):
     bpy.ops.import_mesh.stl(filepath=path_to_fork_stl, filter_glob="*.stl")
@@ -204,8 +206,8 @@ def make_noodle():
     bpy.ops.curve.primitive_nurbs_path_add(radius=1.0, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(1,1,1))
     bpy.ops.object.editmode_toggle()
 
-    #bpy.ops.curve.subdivide(number_cuts=2) 
-    bpy.ops.curve.subdivide(number_cuts=3) 
+    bpy.ops.curve.subdivide(number_cuts=2) 
+    #bpy.ops.curve.subdivide(number_cuts=3) 
     bpy.ops.object.editmode_toggle()
     path = bpy.context.object
 
@@ -418,7 +420,8 @@ def noodle_state(noodles):
     hull = ConvexHull(points_2d)
     end = time.time()
 
-    center_2d = np.mean(points_2d, axis=0)
+   # center_2d = np.mean(points_2d, axis=0)
+    center_2d = np.zeros(2)
     hull_points_2d = points_2d[hull.vertices]
 
     neigh = NearestNeighbors()
@@ -462,12 +465,13 @@ def remove_picked_up(noodles):
 
 
 def generate_dataset(episodes):
-    
+    if not os.path.exists('masks'):
+        os.mkdir('masks')
     if not os.path.exists('annots'):
         os.mkdir('annots')
 
-    #render_size = (140,140)
-    render_size = (64,64)
+    render_size = (140,140)
+    #render_size = (64,64)
     set_render_settings('CYCLES', render_size)
     clear_scene()
     camera = add_camera_light()
@@ -498,18 +502,18 @@ def generate_dataset(episodes):
         i+=1
     reset_pusher(pusher, bpy.context.scene.frame_current)
 
-    #start_frame = 30+(i*15)
-    #freeze_softbody_physics(noodles)
-    #densest_3d, angle = densest_point_angle(noodles)
-    #add_softbody_physics(noodles)
-    #fork = make_fork('assets/fork.stl')
+    start_frame = 30+(i*15)
+    freeze_softbody_physics(noodles)
+    densest_3d, angle = densest_point_angle(noodles)
+    add_softbody_physics(noodles)
+    fork = make_fork('assets/fork.stl')
 
-    #twirl(fork, 30+start_frame, 5, 20, 20, densest_3d, angle)
-    #freeze_softbody_physics(noodles)
-    #remove_picked_up(noodles)
-    #reset_fork(fork, bpy.context.scene.frame_current)
+    twirl(fork, 30+start_frame, 5, 20, 20, densest_3d, angle)
+    freeze_softbody_physics(noodles)
+    remove_picked_up(noodles)
+    reset_fork(fork, bpy.context.scene.frame_current)
 
-    #wait(30+start_frame+45,30)
+    wait(30+start_frame+45,30)
 
 if __name__ == '__main__':
     generate_dataset(1)
