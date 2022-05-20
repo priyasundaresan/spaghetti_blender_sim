@@ -404,7 +404,6 @@ def reset_fork(fork):
     fork.keyframe_insert(data_path="rotation_euler", frame=bpy.context.scene.frame_current)
 
 def noodle_state(noodles):
-    print(noodles.data.splines)
     points = []
     for curve in noodles.data.splines:
         for point in curve.points:
@@ -412,27 +411,31 @@ def noodle_state(noodles):
             point = point[:3]
             points.append(point)
     points = np.array(points)
-    print('points', points.shape, len(noodles.data.splines))
-    points_2d = points[:,:2]
-    start = time.time()
-    hull = ConvexHull(points_2d)
-    end = time.time()
 
-   # center_2d = np.mean(points_2d, axis=0)
-    center_2d = np.zeros(2)
-    hull_points_2d = points_2d[hull.vertices]
+    if len(points):
+        points_2d = points[:,:2]
+        start = time.time()
+        hull = ConvexHull(points_2d)
+        end = time.time()
 
-    neigh = NearestNeighbors()
-    neigh.fit(hull_points_2d)
-    match_idxs = neigh.kneighbors([center_2d], len(hull.vertices), return_distance=False) 
-    furthest_idx = match_idxs.squeeze().tolist()[-1]
-    furthest_2d = hull_points_2d[furthest_idx]
+   #     center_2d = np.mean(points_2d, axis=0)
+        center_2d = np.zeros(2)
+        hull_points_2d = points_2d[hull.vertices]
 
-    #print('hull area', hull.volume)
-    #print('center', center_2d)
-    #print('furthest_2d', furthest_2d)
-    
-    return hull_points_2d, center_2d, furthest_2d, hull.volume, densest_point(noodles)
+        neigh = NearestNeighbors()
+        neigh.fit(hull_points_2d)
+        match_idxs = neigh.kneighbors([center_2d], len(hull.vertices), return_distance=False) 
+        furthest_idx = match_idxs.squeeze().tolist()[-1]
+        furthest_2d = hull_points_2d[furthest_idx]
+
+        #print('hull area', hull.volume)
+        #print('center', center_2d)
+        #print('furthest_2d', furthest_2d)
+        
+        return hull_points_2d, center_2d, furthest_2d, hull.volume, densest_point(noodles)
+    else:
+        print('here')
+        return np.zeros(2), np.zeros(2), np.zeros(2), 0, np.zeros(2)
 
 def remove_picked_up(noodles):
     bpy.ops.object.select_all(action='DESELECT')

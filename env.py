@@ -37,6 +37,7 @@ class SpaghettiEnv(Env):
         self.max_action_count = 10
     
     def reset(self):
+        self.action_ctr = 0
         num_noodles = np.random.randint(5,20)
         self.noodles = reset_sim(self.pusher, self.fork, num_noodles)
         obs = render(0)
@@ -89,6 +90,23 @@ class SpaghettiEnv(Env):
 
 if __name__ == '__main__':
     env = SpaghettiEnv()
+    obs = env.reset()
+    env.render()
+    while True:
+        # Take a random action
+        print(env.action_ctr)
+        action = env.action_space.sample()
+        obs, reward, done, info = env.step(action)
+        print(reward, info)
+
+        if done == True:
+            break
+        
+        # Render the game
+        env.render()
+
+    print('here')
+    done = False
     obs = env.reset()
     env.render()
     while True:
