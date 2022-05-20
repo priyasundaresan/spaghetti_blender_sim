@@ -96,8 +96,8 @@ def render(episode):
     height = bpy.context.scene.render.resolution_y
     image = pixels.reshape(height,width,4)
     image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    #cv2.imshow('img', image)
-    #cv2.waitKey(0)
+    cv2.imshow('img', image)
+    cv2.waitKey(0)
     #cv2.imwrite('masks/%05d.jpg'%episode, image)
 
     return image
@@ -250,6 +250,7 @@ def make_noodle_pile(n_noodles, settle_time=30):
 def delete_objs(objs):
     bpy.ops.object.select_all(action='DESELECT')
     for obj in objs:
+        bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
     bpy.ops.object.delete()
 
@@ -414,7 +415,7 @@ def noodle_state(noodles):
             point = point[:3]
             points.append(point)
     points = np.array(points)
-    print('points', points)
+    print('points', points.shape)
     points_2d = points[:,:2]
     start = time.time()
     hull = ConvexHull(points_2d)
@@ -462,16 +463,21 @@ def remove_picked_up(noodles):
     bpy.ops.object.editmode_toggle()
     return noodles
 
+def clear_actions_frames():
+    bpy.context.scene.frame_set(0)
+    for a in bpy.data.actions:
+        bpy.data.actions.remove(a)
+
 def initialize_sim():
     if not os.path.exists('masks'):
         os.mkdir('masks')
     if not os.path.exists('annots'):
         os.mkdir('annots')
 
-    #render_size = (140,140)
     render_size = (64,64)
     set_render_settings('CYCLES', render_size)
     clear_scene()
+    clear_actions_frames()
     camera = add_camera_light()
     params = {"table_size":10}
     make_table(params)
@@ -481,12 +487,15 @@ def initialize_sim():
     reset_pusher(pusher)
     fork = make_fork('assets/fork.stl')
     reset_fork(fork)
+
     return pusher, fork
 
 def reset_sim(pusher, fork, num_noodles):
     reset_pusher(pusher)
     reset_fork(fork)
     noodles = make_noodle_pile(num_noodles)
+    print(noodles.name)
+    clear_actions_frames()
     return noodles
 
 def take_push_action(pusher, noodles):
@@ -514,8 +523,7 @@ def take_twirl_action(fork, noodles):
     reset_fork(fork)
 
 
-def generate_dataset(episodes):
-    pusher, fork = initialize_sim()
+def generate_dataset(episodes, pusher, fork):
     initial_noodles = 15
     noodles = reset_sim(pusher, fork, initial_noodles)
 
@@ -536,5 +544,11 @@ def generate_dataset(episodes):
     for r in rewards:
         print(r)
 
+    delete_objs([noodles])
+
 if __name__ == '__main__':
-    generate_dataset(1)
+    pusher, fork = initialize_sim()
+    generate_dataset(1, pusher, fork)
+    generate_dataset(1, pusher, fork)
+    #delete_objs([noodles])
+    #noodles = generate_dataset(1, pusher, fork)
