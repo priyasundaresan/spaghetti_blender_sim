@@ -91,14 +91,14 @@ def render(episode):
     bpy.ops.render.render(write_still=True)
     image = None
 
-    #pixels = np.array(bpy.data.images['Viewer Node'].pixels)
-    #width = bpy.context.scene.render.resolution_x
-    #height = bpy.context.scene.render.resolution_y
-    #image = pixels.reshape(height,width,4)
-    #image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    ##cv2.imshow('img', image)
-    ##cv2.waitKey(0)
-    ##cv2.imwrite('masks/%05d.jpg'%episode, image)
+    pixels = np.array(bpy.data.images['Viewer Node'].pixels)
+    width = bpy.context.scene.render.resolution_x
+    height = bpy.context.scene.render.resolution_y
+    image = pixels.reshape(height,width,4)
+    image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    #cv2.imshow('img', image)
+    #cv2.waitKey(0)
+    #cv2.imwrite('masks/%05d.jpg'%episode, image)
 
     return image
 
@@ -186,12 +186,13 @@ def annotate(points):
         pixels.append(pixel)
     return pixels
 
-def get_reward(noodles):
+def get_coverage_pickup_stats(noodles):
     freeze_softbody_physics(noodles)
     hull_2d, center_2d, furthest_2d, area, densest_3d = noodle_state(noodles)
-    #print('REWARD: area, noodles', area, len(noodles.data.splines))
     add_softbody_physics(noodles)
-    return area, len(noodles.data.splines)
+    coverage = area
+    num_noodles_left = len(noodles.data.splines)
+    return coverage, num_noodles_left 
 
 def make_noodle():
     #location = np.random.uniform(-0.3,0.3,3)
@@ -279,10 +280,10 @@ def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_
 
     for step in range(start_frame, start_frame+push_duration+lift_duration):
         bpy.context.scene.frame_set(step)
-        x,y,z = pusher.matrix_world.translation
-        pixels = annotate([[x,y,z]] + [[h[0],h[1],0] for h in hull_2d] + [densest_3d])
-        render(step-30)
-        np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
+        #x,y,z = pusher.matrix_world.translation
+        #pixels = annotate([[x,y,z]] + [[h[0],h[1],0] for h in hull_2d] + [densest_3d])
+        #render(step-30)
+        #np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
 
     #render(step-30)
 
@@ -319,10 +320,9 @@ def twirl(fork, down_duration, twirl_duration, scoop_duration, wait_duration, tw
 
     for step in range(start_frame, start_frame+down_duration+twirl_duration+scoop_duration):
         bpy.context.scene.frame_set(step)
-        pixels = annotate([twirl_start_3d])
-        render(step-30)
-        np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
-
+        #pixels = annotate([twirl_start_3d])
+        #render(step-30)
+        #np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
 
     wait(wait_duration)
 
@@ -414,6 +414,7 @@ def noodle_state(noodles):
             point = point[:3]
             points.append(point)
     points = np.array(points)
+    print('points', points)
     points_2d = points[:,:2]
     start = time.time()
     hull = ConvexHull(points_2d)
@@ -518,20 +519,22 @@ def generate_dataset(episodes):
     initial_noodles = 15
     noodles = reset_sim(pusher, fork, initial_noodles)
 
-    initial_area, initial_num_noodles = get_reward(noodles)
+    initial_area, initial_num_noodles = get_coverage_pickup_stats(noodles)
     rewards = []
     for i in range(10):
+        render(bpy.context.scene.frame_current-30)
         if random.random()<0.8:
             take_push_action(pusher, noodles)
         else:
             take_twirl_action(fork, noodles)
-        area, num_noodles = get_reward(noodles)
+        area, num_noodles = get_coverage_pickup_stats(noodles)
         rewards.append([initial_area-area, initial_num_noodles-num_noodles])
         initial_area = area
         initial_num_noodles = num_noodles
 
     print('rewards: area, noodles')
-    print(rewards)
+    for r in rewards:
+        print(r)
 
 if __name__ == '__main__':
     generate_dataset(1)
