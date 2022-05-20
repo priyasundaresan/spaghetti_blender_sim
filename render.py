@@ -12,7 +12,6 @@ import bmesh
 from math import pi
 import os
 import sys
-sys.path.append(os.getcwd())
 
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from sklearn.neighbors import NearestNeighbors
@@ -63,8 +62,6 @@ def set_render_settings(engine, render_size, generate_masks=True):
     scene.cycles.transparent_max_bounces = 1
     scene.cycles.transparent_min_bounces = 1
     scene.view_layers[0].use_pass_object_index = True
-    #scene.render.tile_x = 256
-    #scene.render.tile_y = 256
     scene.render.use_persistent_data = True
     scene.cycles.device = 'GPU'
 
@@ -96,8 +93,8 @@ def render(episode):
     height = bpy.context.scene.render.resolution_y
     image = pixels.reshape(height,width,4)
     image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    cv2.imshow('img', image)
-    cv2.waitKey(0)
+    #cv2.imshow('img', image)
+    #cv2.waitKey(0)
     #cv2.imwrite('masks/%05d.jpg'%episode, image)
 
     return image
@@ -121,7 +118,6 @@ def make_fork(path_to_fork_stl):
     return fork
 
 def make_table(params):
-    #bpy.ops.import_mesh.stl(filepath='assets/tray.stl', filter_glob="*.stl")
     bpy.ops.mesh.primitive_plane_add(size=params["table_size"], location=(0,0,0))
     bpy.ops.rigidbody.object_add()
     table = bpy.context.object
@@ -408,6 +404,7 @@ def reset_fork(fork):
     fork.keyframe_insert(data_path="rotation_euler", frame=bpy.context.scene.frame_current)
 
 def noodle_state(noodles):
+    print(noodles.data.splines)
     points = []
     for curve in noodles.data.splines:
         for point in curve.points:
@@ -415,7 +412,7 @@ def noodle_state(noodles):
             point = point[:3]
             points.append(point)
     points = np.array(points)
-    print('points', points.shape)
+    print('points', points.shape, len(noodles.data.splines))
     points_2d = points[:,:2]
     start = time.time()
     hull = ConvexHull(points_2d)
@@ -431,9 +428,9 @@ def noodle_state(noodles):
     furthest_idx = match_idxs.squeeze().tolist()[-1]
     furthest_2d = hull_points_2d[furthest_idx]
 
-    print('hull area', hull.volume)
-    print('center', center_2d)
-    print('furthest_2d', furthest_2d)
+    #print('hull area', hull.volume)
+    #print('center', center_2d)
+    #print('furthest_2d', furthest_2d)
     
     return hull_points_2d, center_2d, furthest_2d, hull.volume, densest_point(noodles)
 
@@ -468,6 +465,13 @@ def clear_actions_frames():
     for a in bpy.data.actions:
         bpy.data.actions.remove(a)
 
+def clear_noodles():
+    objs = []
+    for obj in bpy.data.objects:
+        if "Nurbs" in obj.name:
+            objs.append(obj)
+    delete_objs(objs)
+
 def initialize_sim():
     if not os.path.exists('masks'):
         os.mkdir('masks')
@@ -494,7 +498,7 @@ def reset_sim(pusher, fork, num_noodles):
     reset_pusher(pusher)
     reset_fork(fork)
     noodles = make_noodle_pile(num_noodles)
-    print(noodles.name)
+    #print(noodles.name)
     clear_actions_frames()
     return noodles
 
@@ -540,9 +544,9 @@ def generate_dataset(episodes, pusher, fork):
         initial_area = area
         initial_num_noodles = num_noodles
 
-    print('rewards: area, noodles')
-    for r in rewards:
-        print(r)
+    #print('rewards: area, noodles')
+    #for r in rewards:
+    #    print(r)
 
     delete_objs([noodles])
 
