@@ -6,14 +6,14 @@ from torch.distributions import Normal
 
 
 class VisualEncoder(nn.Module):
-    def __init__(self, embedding_size, activation_function='relu'):
+    def __init__(self, embedding_size, activation_function='relu', img_size=64):
         super().__init__()
         self.act_fn = getattr(F, activation_function)
         self.embedding_size = embedding_size
-        self.conv1 = nn.Conv2d(3, 32, 4, stride=2)
-        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
-        self.conv3 = nn.Conv2d(64, 128, 4, stride=2)
-        self.conv4 = nn.Conv2d(128, 256, 4, stride=2)
+        self.conv1 = nn.Conv2d(3, img_size//2, 4, stride=2)
+        self.conv2 = nn.Conv2d(img_size//2, img_size, 4, stride=2)
+        self.conv3 = nn.Conv2d(img_size, img_size*2, 4, stride=2)
+        self.conv4 = nn.Conv2d(img_size*2, 256, 4, stride=2)
         if embedding_size == 1024:
             self.fc = nn.Identity()
         else:
@@ -34,16 +34,17 @@ class VisualDecoder(nn.Module):
             state_size,
             latent_size,
             embedding_size,
-            activation_function='relu'
+            activation_function='relu',
+            img_size=64
         ):
         super().__init__()
         self.act_fn = getattr(F, activation_function)
         self.embedding_size = embedding_size
         self.fc1 = nn.Linear(latent_size + state_size, embedding_size)
-        self.conv1 = nn.ConvTranspose2d(embedding_size, 128, 5, stride=2)
-        self.conv2 = nn.ConvTranspose2d(128, 64, 5, stride=2)
-        self.conv3 = nn.ConvTranspose2d(64, 32, 6, stride=2)
-        self.conv4 = nn.ConvTranspose2d(32, 3, 6, stride=2)
+        self.conv1 = nn.ConvTranspose2d(embedding_size, img_size*2, 5, stride=2)
+        self.conv2 = nn.ConvTranspose2d(img_size*2, img_size, 5, stride=2)
+        self.conv3 = nn.ConvTranspose2d(img_size, img_size//2, 6, stride=2)
+        self.conv4 = nn.ConvTranspose2d(img_size//2, 3, 6, stride=2)
 
     def forward(self, state, latent):
         hidden = self.fc1(torch.cat([state, latent], dim=1))

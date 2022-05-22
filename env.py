@@ -22,8 +22,8 @@ class SpaghettiEnv(Env):
     def __init__(self):
         super(SpaghettiEnv, self).__init__()
         # Define a 2-D observation space
-        #self.observation_shape = (64, 64, 3)
-        self.observation_shape = (128, 128, 3)
+        self.observation_shape = (64, 64, 3)
+        #self.observation_shape = (128, 128, 3)
         self.observation_space = spaces.Box(low = np.zeros(self.observation_shape), 
                                             high = np.ones(self.observation_shape),
                                             dtype = np.float16)

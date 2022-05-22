@@ -18,8 +18,8 @@ def to_tensor_obs(image):
     """
     Converts the input np img to channel first 64x64 dim torch img.
     """
-    #image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_LINEAR)
-    image = cv2.resize(image, (128, 128), interpolation=cv2.INTER_LINEAR)
+    image = cv2.resize(image, (64, 64), interpolation=cv2.INTER_LINEAR)
+    #image = cv2.resize(image, (128, 128), interpolation=cv2.INTER_LINEAR)
     image = torch.tensor(image, dtype=torch.float32).permute(2, 0, 1)
     return image
 
@@ -255,8 +255,8 @@ class TorchImageEnvWrapper:
 
     @property
     def observation_size(self):
-        #return (3, 64, 64)
-        return (3, 128, 128)
+        return (3, 64, 64)
+        #return (3, 128, 128)
 
     @property
     def action_size(self):
