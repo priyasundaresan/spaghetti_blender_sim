@@ -86,13 +86,13 @@ def initialize_renderer():
 def render(episode):
     bpy.context.scene.render.filepath = 'masks/%05d.jpg'%episode
     bpy.ops.render.render(write_still=True)
-    image = None
-
+    #image = cv2.imread('masks/%05d.jpg'%episode)
     pixels = np.array(bpy.data.images['Viewer Node'].pixels)
     width = bpy.context.scene.render.resolution_x
     height = bpy.context.scene.render.resolution_y
-    image = pixels.reshape(height,width,4)
+    image = pixels.reshape(height,width,4)[:,:,:3]
     image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
     #cv2.imshow('img', image)
     #cv2.waitKey(0)
     #cv2.imwrite('masks/%05d.jpg'%episode, image)
@@ -183,7 +183,11 @@ def annotate(points):
     return pixels
 
 def get_coverage_pickup_stats(noodles):
-    freeze_softbody_physics(noodles)
+    try:
+        freeze_softbody_physics(noodles)
+    except:
+        pass
+        #print('here')
     hull_2d, center_2d, furthest_2d, area, densest_3d = noodle_state(noodles)
     add_softbody_physics(noodles)
     coverage = area
@@ -254,7 +258,7 @@ def delete_objs(objs):
 def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_2d, densest_3d, annot_dir='annots'):
     start_frame = bpy.context.scene.frame_current
     
-    push_end_2d = [0,0]
+    #push_end_2d = [0,0]
 
     offset = push_end_2d - push_start_2d
     angle = np.arctan(offset[1]/offset[0])
@@ -284,6 +288,8 @@ def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_
 
     #render(step-30)
 
+    #bpy.context.scene.camera.location[0] = push_end_2d[0]
+    #bpy.context.scene.camera.location[1] = push_end_2d[1]
     return start_frame+push_duration
 
 def wait(wait_duration):
@@ -322,6 +328,9 @@ def twirl(fork, down_duration, twirl_duration, scoop_duration, wait_duration, tw
         #np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
 
     wait(wait_duration)
+
+    #bpy.context.scene.camera.location[0] = twirl_start_3d[0]
+    #bpy.context.scene.camera.location[1] = twirl_start_3d[1]
 
     #render(step+wait_duration-30)
 
@@ -413,13 +422,16 @@ def noodle_state(noodles):
     points = np.array(points)
 
     if len(points):
+        densest_3d = densest_point(noodles)
         points_2d = points[:,:2]
         start = time.time()
         hull = ConvexHull(points_2d)
         end = time.time()
 
-   #     center_2d = np.mean(points_2d, axis=0)
-        center_2d = np.zeros(2)
+        #center_2d = np.mean(points_2d, axis=0)
+        #center_2d = np.zeros(2)
+        #print(center_2d)
+        center_2d = densest_3d[:2]
         hull_points_2d = points_2d[hull.vertices]
 
         neigh = NearestNeighbors()
@@ -432,9 +444,8 @@ def noodle_state(noodles):
         #print('center', center_2d)
         #print('furthest_2d', furthest_2d)
         
-        return hull_points_2d, center_2d, furthest_2d, hull.volume, densest_point(noodles)
+        return hull_points_2d, center_2d, furthest_2d, hull.volume, densest_3d
     else:
-        print('here')
         return np.zeros(2), np.zeros(2), np.zeros(2), 0, np.zeros(2)
 
 def remove_picked_up(noodles):
@@ -481,7 +492,8 @@ def initialize_sim():
     if not os.path.exists('annots'):
         os.mkdir('annots')
 
-    render_size = (64,64)
+    #render_size = (64,64)
+    render_size = (128,128)
     set_render_settings('CYCLES', render_size)
     clear_scene()
     clear_actions_frames()
@@ -492,7 +504,8 @@ def initialize_sim():
     initialize_renderer()
     pusher = make_pusher()
     reset_pusher(pusher)
-    fork = make_fork('assets/fork.stl')
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    fork = make_fork('%s/assets/fork.stl'%dir_path)
     reset_fork(fork)
 
     return pusher, fork

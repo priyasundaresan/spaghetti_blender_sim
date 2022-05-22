@@ -22,23 +22,25 @@ class SpaghettiEnv(Env):
     def __init__(self):
         super(SpaghettiEnv, self).__init__()
         # Define a 2-D observation space
-        self.observation_shape = (64, 64, 3)
+        #self.observation_shape = (64, 64, 3)
+        self.observation_shape = (128, 128, 3)
         self.observation_space = spaces.Box(low = np.zeros(self.observation_shape), 
                                             high = np.ones(self.observation_shape),
                                             dtype = np.float16)
         
         # Define an action space ranging from 0 to 2
         self.action_space = spaces.Discrete(2,) # push or group
-
         self.noodles = None
         self.pusher, self.fork = initialize_sim()
         self.current_render = None
         self.action_ctr = 0
         self.max_action_count = 10
+        self.initial_num_noodles = 0
     
     def reset(self):
         self.action_ctr = 0
         num_noodles = np.random.randint(5,20)
+        self.initial_num_noodles = num_noodles
         self.noodles = reset_sim(self.pusher, self.fork, num_noodles)
         obs = render(0)
         self.current_render = obs
@@ -48,7 +50,7 @@ class SpaghettiEnv(Env):
         assert mode in ["human", "rgb_array"], "Invalid mode, must be either \"human\" or \"rgb_array\""
         if mode == "human":
             cv2.imshow("img", self.current_render)
-            cv2.waitKey(10)
+            cv2.waitKey(5)
         elif mode == "rgb_array":
             return self.current_render
 
@@ -73,16 +75,19 @@ class SpaghettiEnv(Env):
 
         area, num_noodles = get_coverage_pickup_stats(self.noodles)
 
-        area_reward = initial_area - area
         pickup_reward = initial_num_noodles - num_noodles
-        reward = area_reward + pickup_reward
+        area_reward = initial_area - area
+        reward = 2*area_reward + pickup_reward
 
         obs = render(0)
         self.current_render = obs
         self.action_ctr += 1
 
-        done = (self.action_ctr >= self.max_action_count) or (num_noodles <= 2)
+        print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
+                'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[action]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
 
+        #done = (self.action_ctr >= self.max_action_count) or (num_noodles <= 2)
+        done = (self.action_ctr >= self.max_action_count) or (num_noodles <= 0)
         if done:
             clear_noodles()
 
@@ -92,12 +97,15 @@ if __name__ == '__main__':
     env = SpaghettiEnv()
     obs = env.reset()
     env.render()
+
+    images = [obs]
+    actions = [0]
     while True:
         # Take a random action
-        print(env.action_ctr)
         action = env.action_space.sample()
         obs, reward, done, info = env.step(action)
-        print(reward, info)
+        images.append(obs)
+        actions.append(action)
 
         if done == True:
             break
@@ -105,22 +113,11 @@ if __name__ == '__main__':
         # Render the game
         env.render()
 
-    print('here')
-    done = False
-    obs = env.reset()
-    env.render()
-    while True:
-        # Take a random action
-        print(env.action_ctr)
-        action = env.action_space.sample()
-        obs, reward, done, info = env.step(action)
-        print(reward, info)
-
-        if done == True:
-            break
-        
-        # Render the game
-        env.render()
-        
-    
     env.close()
+
+    print('done, showing states')
+    for action,img in zip(actions,images):
+        cv2.putText(img, str(action), (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 1, cv2.LINE_AA)
+        cv2.imshow('img', img)
+        cv2.waitKey(0)
+
