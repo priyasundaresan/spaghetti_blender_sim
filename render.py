@@ -195,11 +195,11 @@ def get_coverage_pickup_stats(noodles):
     return coverage, num_noodles_left 
 
 def make_noodle():
-    #location = np.random.uniform(-0.3,0.3,3)
-    location = np.random.uniform(-0.6,0.6,3)
+    #location = np.random.uniform(-0.6,0.6,3)
+    location = np.random.uniform(-1.1,1.1,3)
     location[2] = np.random.uniform(0.25,1.00)
-    #rotation = np.array([np.random.uniform(-0.02, 0.02),np.random.uniform(-0.02, 0.02),np.random.uniform(0, np.pi)])
-    rotation = np.array([np.random.uniform(-0.2, 0.2),np.random.uniform(-0.2, 0.2),np.random.uniform(0, np.pi)])
+    #rotation = np.array([np.random.uniform(-0.2, 0.2),np.random.uniform(-0.2, 0.2),np.random.uniform(0, np.pi)])
+    rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
     bpy.ops.curve.primitive_nurbs_path_add(radius=1.0, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(1,1,1))
     bpy.ops.object.editmode_toggle()
 
@@ -493,7 +493,7 @@ def initialize_sim():
         os.mkdir('annots')
 
     #render_size = (64,64)
-    render_size = (128,128)
+    render_size = (256,256)
     set_render_settings('CYCLES', render_size)
     clear_scene()
     clear_actions_frames()
@@ -522,8 +522,8 @@ def take_push_action(pusher, noodles):
     freeze_softbody_physics(noodles)
     hull_2d, center_2d, furthest_2d, area, densest_3d = noodle_state(noodles)
     add_softbody_physics(noodles)
-    push_duration = 10
-    lift_duration = 3
+    push_duration = 15
+    lift_duration = 5
     start = push(pusher, push_duration, lift_duration, furthest_2d, center_2d, hull_2d, densest_3d)
 
 def take_twirl_action(fork, noodles):

@@ -93,7 +93,6 @@ def visualize_episode(frames, episode, path, name):
     for i, frame in enumerate(frames[..., ::-1]):
         action = episode.u[i].argmax()
         reward = episode.r[i]
-        print(frame.shape)
         vis = frame.copy()
         cv2.putText(vis, '%s'%mapping[action], (10,15), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255,255,0), 1, cv2.LINE_AA)
         cv2.putText(vis, 'Reward: %.2f'%reward, (10,25), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255,255,0), 1, cv2.LINE_AA)

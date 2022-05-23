@@ -1,4 +1,7 @@
-FROM nvidia/cudagl:10.1-base-ubuntu18.04
+#FROM nvidia/cudagl:11.1-base-ubuntu18.04
+#FROM nvidia/cudagl:11.3-base-ubuntu20.04
+#FROM nvidia/cudagl:11.3.0-devel-ubuntu20.04
+FROM nvidia/cudagl:11.2.0-base-ubuntu18.04
 
 # Enviorment variables
 ENV DEBIAN_FRONTEND noninteractive
@@ -8,6 +11,11 @@ ENV PATH "$PATH:/bin/3.1/python/bin/"
 ENV BLENDER_PATH "/bin/3.1"
 ENV BLENDERPIP "/bin/3.1/python/bin/pip3"
 ENV BLENDERPY "/bin/3.1/python/bin/python3.10"
+
+RUN apt-key del 7fa2af80
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
+RUN rm /etc/apt/sources.list.d/*
+RUN apt-get clean
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \ 
@@ -47,8 +55,7 @@ RUN wget https://www.python.org/ftp/python/3.10.0/Python-3.10.0.tgz \
 
 ## Must first ensurepip to install Blender pip3 and then new numpy
 RUN ${BLENDERPY} -m ensurepip && ${BLENDERPIP} install --upgrade pip && \
-    ${BLENDERPIP} install torch==1.11.0 && \
-    ${BLENDERPIP} install torchvision==0.12.0 && \
+    ${BLENDERPIP} install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu113/torch_nightly.html && \
     ${BLENDERPIP} install tqdm==4.42.1 && \
     ${BLENDERPIP} install gym==0.16.0 && \
     ${BLENDERPIP} install tensorboard==1.15.0 && \

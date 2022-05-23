@@ -3,7 +3,7 @@ import os
 sys.path.append(os.getcwd())
 sys.path.append(os.path.join(os.getcwd(), '..'))
 
-import pdb
+#import pdb
 import torch
 from tqdm import trange
 from functools import partial
@@ -129,7 +129,9 @@ def main():
         if (i + 1) % 25 == 0:
             torch.save(rssm_model.state_dict(), f'{res_dir}/ckpt_{i+1}.pth')
 
-    pdb.set_trace()
+    print('DONE')
+
+    #pdb.set_trace()
 
 if __name__ == '__main__':
     main()
