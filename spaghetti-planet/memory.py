@@ -17,6 +17,7 @@ class Episode:
         self.u = []
         self.t = []
         self.r = []
+        self.action_pixels = []
         self.postprocess_fn = postprocess_fn
         self._size = 0
 
@@ -24,12 +25,14 @@ class Episode:
     def size(self):
         return self._size
 
-    def append(self, obs, act, reward, terminal):
+    def append(self, obs, act, reward, terminal, action_pixels):
         self._size += 1
         self.x.append(self.postprocess_fn(obs.numpy()))
-        self.u.append(act.cpu().numpy())
+        #self.u.append(act.cpu().numpy())
+        self.u.append(act.cpu().numpy().squeeze())
         self.r.append(reward)
         self.t.append(terminal)
+        self.action_pixels.append(action_pixels)
 
     def terminate(self, obs):
         self.x.append(self.postprocess_fn(obs.numpy()))

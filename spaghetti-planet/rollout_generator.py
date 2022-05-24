@@ -39,15 +39,20 @@ class RolloutGenerator:
         eps = self.episode_gen()
         obs = self.env.reset()
         des = f'{self.name} Ts'
-        for _ in trange(self.max_episode_steps, desc=des, leave=False):
+        for t in trange(self.max_episode_steps, desc=des, leave=False):
             if random_policy:
                 act = self.env.sample_random_action()
             else:
                 act = self.policy.poll(obs.to(self.device), explore).flatten()
-            nobs, reward, terminal, _ = self.env.step(act)
-            eps.append(obs, act, reward, terminal)
+
+            if t == self.max_episode_steps-1:
+                act = 1
+
+            nobs, reward, terminal, action_pixels = self.env.step(act)
+            eps.append(obs, act, reward, terminal, action_pixels)
             obs = nobs
             if terminal:
+                eps.append(self.env.render(), act, reward, terminal, action_pixels)
                 break
         eps.terminate(nobs)
         return eps 
@@ -87,7 +92,7 @@ class RolloutGenerator:
         rec_losses = []
         pred_r, act_r = [], []
         eps_reward = 0
-        for _ in trange(self.max_episode_steps, desc=des, leave=False):
+        for t in trange(self.max_episode_steps, desc=des, leave=False):
             with torch.no_grad():
                 act = self.policy.poll(obs.to(self.device)).flatten()
                 dec = self.policy.rssm.decoder(
@@ -99,13 +104,18 @@ class RolloutGenerator:
                 pred_r.append(self.policy.rssm.pred_reward(
                     self.policy.h, self.policy.s
                 ).cpu().flatten().item())
-            nobs, reward, terminal, _ = self.env.step(act)
-            eps.append(obs, act, reward, terminal)
-            print('eval:', act.argmax(), reward, terminal)
+
+            if t == self.max_episode_steps-1:
+                act = 1
+
+            nobs, reward, terminal, action_pixels = self.env.step(act)
+            eps.append(obs, act, reward, terminal, action_pixels)
+            print('eval:', act.argmax(), reward, terminal, action_pixels)
             act_r.append(reward)
             eps_reward += reward
             obs = nobs
             if terminal:
+                eps.append(self.env.render(), act, reward, terminal, action_pixels)
                 break
         eps.terminate(nobs)
         metrics['eval/episode_reward'] = eps_reward

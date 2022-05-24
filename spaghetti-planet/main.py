@@ -79,23 +79,32 @@ def train(memory, rssm, optimizer, device, N=32, H=1, beta=1.0, grads=False):
 
 
 def main():
-    #env = TorchImageEnvWrapper('Pendulum-v0', bit_depth=5)
     env = SpaghettiEnv()
-    env = OneHotAction(env)
+    #env = OneHotAction(env)
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
     print('action size', env.action_size)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     rssm_model = RecurrentStateSpaceModel(env.action_size).to(device)
     optimizer = torch.optim.Adam(rssm_model.parameters(), lr=1e-3, eps=1e-4)
+    #policy = RSSMPolicy(
+    #    rssm_model, 
+    #    planning_horizon=10,
+    #    num_candidates=1000,
+    #    num_iterations=10,
+    #    top_candidates=100,
+    #    device=device
+    #)
+
     policy = RSSMPolicy(
         rssm_model, 
         planning_horizon=10,
-        num_candidates=1000,
-        num_iterations=10,
-        top_candidates=100,
+        num_candidates=1024,
+        num_iterations=1,
+        top_candidates=1,
         device=device
     )
+
     rollout_gen = RolloutGenerator(
         env,
         device,

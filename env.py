@@ -22,6 +22,7 @@ class SpaghettiEnv(Env):
     def __init__(self):
         super(SpaghettiEnv, self).__init__()
         # Define a 2-D observation space
+        self.blender_render_size = (256,256,3)
         self.observation_shape = (64, 64, 3)
         #self.observation_shape = (128, 128, 3)
         self.observation_space = spaces.Box(low = np.zeros(self.observation_shape), 
@@ -62,6 +63,7 @@ class SpaghettiEnv(Env):
         
     def step(self, action):
         # Flag that marks the termination of an episode
+        action = int(action)
         
         # Assert that it is a valid action 
         assert self.action_space.contains(action), "Invalid Action"
@@ -69,29 +71,32 @@ class SpaghettiEnv(Env):
         initial_area, initial_num_noodles = get_coverage_pickup_stats(self.noodles)
 
         if action == 0:
-            take_push_action(self.pusher, self.noodles)
+            action_pixels = take_push_action(self.pusher, self.noodles)
         elif action == 1:
-            take_twirl_action(self.fork, self.noodles)
+            action_pixels = take_twirl_action(self.fork, self.noodles)
 
         area, num_noodles = get_coverage_pickup_stats(self.noodles)
 
-        pickup_reward = initial_num_noodles - num_noodles
-        area_reward = initial_area - area
+        pickup_reward = initial_num_noodles - num_noodles # reward for picking up noodles
+        area_reward = initial_area - area # reward for minimizing coverage
         reward = 2*area_reward + pickup_reward
 
         obs = render(0)
         self.current_render = obs
         self.action_ctr += 1
 
-        print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
-                'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[action]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
 
-        #done = (self.action_ctr >= self.max_action_count) or (num_noodles <= 2)
+        #print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
+        #        'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[action]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
+
+        print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
+                'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[int(action)]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
+
         done = (self.action_ctr >= self.max_action_count) or (num_noodles <= 0)
         if done:
             clear_noodles()
 
-        return obs, reward, done, [area_reward, pickup_reward]
+        return obs, reward, done, np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
 
 if __name__ == '__main__':
     env = SpaghettiEnv()
