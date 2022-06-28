@@ -194,12 +194,25 @@ def get_coverage_pickup_stats(noodles):
     num_noodles_left = len(noodles.data.splines)
     return coverage, num_noodles_left 
 
-def make_noodle():
-    #location = np.random.uniform(-0.3,0.3,3)
-    location = np.random.uniform(-0.6,0.6,3)
-    location[2] = np.random.uniform(0.25,1.00)
-    #rotation = np.array([np.random.uniform(-0.02, 0.02),np.random.uniform(-0.02, 0.02),np.random.uniform(0, np.pi)])
-    rotation = np.array([np.random.uniform(-0.2, 0.2),np.random.uniform(-0.2, 0.2),np.random.uniform(0, np.pi)])
+def generate_heldout_noodle_state(num_noodles):
+    locations = []
+    rotations = []
+    for i in range(num_noodles):
+        np.random.seed(num_noodles)
+        location = np.random.uniform(-1.0,1.0,3)
+        location[2] = np.random.uniform(0.25,1.00)
+        np.random.seed(num_noodles)
+        rotation = np.array([np.random.uniform(-0.2, 0.2),np.random.uniform(-0.2, 0.2),np.random.uniform(0, np.pi)])
+        locations.append(location)
+        rotations.append(rotation)
+    return locations, rotations
+
+def make_noodle(location=None, rotation=None):
+    if location is None:
+        location = np.random.uniform(-1.0,1.0,3)
+        location[2] = np.random.uniform(0.25,1.00)
+    if rotation is None:
+        rotation = np.array([np.random.uniform(-0.2, 0.2),np.random.uniform(-0.2, 0.2),np.random.uniform(0, np.pi)])
     bpy.ops.curve.primitive_nurbs_path_add(radius=1.0, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(1,1,1))
     bpy.ops.object.editmode_toggle()
 
@@ -230,11 +243,19 @@ def make_noodle():
 
     return path
 
-def make_noodle_pile(n_noodles, settle_time=30):
+def make_noodle_pile(n_noodles, deterministic=False, settle_time=30):
     noodles = []
     bpy.ops.object.select_all(action='DESELECT')
+
+    if deterministic:
+        locations, rotations = generate_heldout_noodle_state(n_noodles)
+
     for i in range(n_noodles):
-        noodle = make_noodle()
+        if deterministic:
+            loc, rot = locations[i], rotations[i]
+        else:
+            loc, rot = None, None
+        noodle = make_noodle(location=loc, rotation=rot)
         noodles.append(noodle)
     for noodle in noodles:
         noodle.select_set(True)
@@ -255,7 +276,7 @@ def delete_objs(objs):
     bpy.ops.object.delete()
 
 
-def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_2d, densest_3d, annot_dir='annots'):
+def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_2d=None, densest_3d=None, annot_dir='annots'):
     start_frame = bpy.context.scene.frame_current
     
     #push_end_2d = [0,0]
@@ -334,7 +355,7 @@ def twirl(fork, down_duration, twirl_duration, scoop_duration, wait_duration, tw
 
     #render(step+wait_duration-30)
 
-def densest_point(noodles):
+def densest_point(noodles, return_avg_density=False):
     start = time.time()
     points = []
     for curve in noodles.data.splines:
@@ -350,15 +371,20 @@ def densest_point(noodles):
 
     min_dist = float('inf')
     densest_point = None
+    all_dists = []
     for idx, point in enumerate(points):
         dists, match_idxs = neigh.kneighbors([point], len(points), return_distance=True) 
         cumulative_dist = sum(dists.squeeze())
+        all_dists.append(cumulative_dist)
         if cumulative_dist <= min_dist:
             densest_point = point
             min_dist = cumulative_dist
     end = time.time()
 
-    return densest_point
+    if not return_avg_density:
+        return densest_point
+    else:
+        return densest_point, np.mean(all_dists)
 
 def densest_point_angle(noodles):
     points = []
@@ -492,8 +518,8 @@ def initialize_sim():
     if not os.path.exists('annots'):
         os.mkdir('annots')
 
-    #render_size = (64,64)
-    render_size = (128,128)
+    render_size = (64,64)
+    #render_size = (128,128)
     set_render_settings('CYCLES', render_size)
     clear_scene()
     clear_actions_frames()
@@ -510,21 +536,25 @@ def initialize_sim():
 
     return pusher, fork
 
-def reset_sim(pusher, fork, num_noodles):
+def reset_sim(pusher, fork, num_noodles, deterministic=False):
     reset_pusher(pusher)
     reset_fork(fork)
-    noodles = make_noodle_pile(num_noodles)
-    #print(noodles.name)
+    noodles = make_noodle_pile(num_noodles, deterministic=deterministic)
     clear_actions_frames()
     return noodles
 
-def take_push_action(pusher, noodles):
+def take_push_action(pusher, noodles, push_start_2d=None, push_end_2d=None):
     freeze_softbody_physics(noodles)
-    hull_2d, center_2d, furthest_2d, area, densest_3d = noodle_state(noodles)
+    if push_start_2d is None and push_end_2d is None:
+        hull_2d, center_2d, furthest_2d, area, densest_3d = noodle_state(noodles)
     add_softbody_physics(noodles)
-    push_duration = 10
-    lift_duration = 3
-    start = push(pusher, push_duration, lift_duration, furthest_2d, center_2d, hull_2d, densest_3d)
+    #push_duration = 10
+    push_duration = 20
+    lift_duration = 5
+    if push_start_2d is None and push_end_2d is None:
+        start = push(pusher, push_duration, lift_duration, furthest_2d, center_2d, hull_2d, densest_3d)
+    else:
+        start = push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d)
 
 def take_twirl_action(fork, noodles):
     freeze_softbody_physics(noodles)

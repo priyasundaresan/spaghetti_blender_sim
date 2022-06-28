@@ -37,11 +37,11 @@ class SpaghettiEnv(Env):
         self.max_action_count = 10
         self.initial_num_noodles = 0
     
-    def reset(self):
+    def reset(self, deterministic=False):
         self.action_ctr = 0
         num_noodles = np.random.randint(5,20)
         self.initial_num_noodles = num_noodles
-        self.noodles = reset_sim(self.pusher, self.fork, num_noodles)
+        self.noodles = reset_sim(self.pusher, self.fork, num_noodles, deterministic=deterministic)
         obs = render(0)
         self.current_render = obs
         return obs
