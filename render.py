@@ -198,21 +198,22 @@ def generate_heldout_noodle_state(num_noodles):
     locations = []
     rotations = []
     for i in range(num_noodles):
-        np.random.seed(num_noodles)
-        location = np.random.uniform(-1.0,1.0,3)
+        np.random.seed(num_noodles+i)
+        location = np.random.uniform(-1.1,1.1,3)
         location[2] = np.random.uniform(0.25,1.00)
-        np.random.seed(num_noodles)
-        rotation = np.array([np.random.uniform(-0.2, 0.2),np.random.uniform(-0.2, 0.2),np.random.uniform(0, np.pi)])
+        np.random.seed(num_noodles+i)
+        rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
         locations.append(location)
         rotations.append(rotation)
     return locations, rotations
 
 def make_noodle(location=None, rotation=None):
+    np.random.seed()
     if location is None:
-        location = np.random.uniform(-1.0,1.0,3)
+        location = np.random.uniform(-1.1,1.1,3)
         location[2] = np.random.uniform(0.25,1.00)
     if rotation is None:
-        rotation = np.array([np.random.uniform(-0.2, 0.2),np.random.uniform(-0.2, 0.2),np.random.uniform(0, np.pi)])
+        rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
     bpy.ops.curve.primitive_nurbs_path_add(radius=1.0, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(1,1,1))
     bpy.ops.object.editmode_toggle()
 
@@ -284,7 +285,7 @@ def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_
     offset = push_end_2d - push_start_2d
     angle = np.arctan(offset[1]/offset[0])
 
-    push_start_2d -= offset*0.1
+    push_start_2d -= offset*0.15
     pusher.location = np.array([push_start_2d[0], push_start_2d[1], 0.5])
     pusher.rotation_euler = (0,np.pi/2,angle)
     pusher.keyframe_insert(data_path="location", frame=start_frame)
@@ -299,7 +300,8 @@ def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_
     pusher.rotation_euler = (0,np.pi/2,angle)
     pusher.keyframe_insert(data_path="location", frame=start_frame+push_duration+lift_duration)
     pusher.keyframe_insert(data_path="rotation_euler", frame=start_frame+push_duration+lift_duration)
-
+    
+    pixels = annotate([[push_start_2d[0], push_start_2d[1], 0], [push_end_2d[0], push_end_2d[1], 0]])
     for step in range(start_frame, start_frame+push_duration+lift_duration):
         bpy.context.scene.frame_set(step)
         #x,y,z = pusher.matrix_world.translation
@@ -311,7 +313,7 @@ def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_
 
     #bpy.context.scene.camera.location[0] = push_end_2d[0]
     #bpy.context.scene.camera.location[1] = push_end_2d[1]
-    return start_frame+push_duration
+    return pixels
 
 def wait(wait_duration):
     start_frame = bpy.context.scene.frame_current
@@ -342,6 +344,7 @@ def twirl(fork, down_duration, twirl_duration, scoop_duration, wait_duration, tw
     fork.keyframe_insert(data_path="location", frame=start_frame+down_duration+twirl_duration+scoop_duration)
     fork.keyframe_insert(data_path="rotation_euler", frame=start_frame+down_duration+twirl_duration+scoop_duration)
 
+    pixels = annotate([twirl_start_3d])
     for step in range(start_frame, start_frame+down_duration+twirl_duration+scoop_duration):
         bpy.context.scene.frame_set(step)
         #pixels = annotate([twirl_start_3d])
@@ -354,6 +357,7 @@ def twirl(fork, down_duration, twirl_duration, scoop_duration, wait_duration, tw
     #bpy.context.scene.camera.location[1] = twirl_start_3d[1]
 
     #render(step+wait_duration-30)
+    return pixels
 
 def densest_point(noodles, return_avg_density=False):
     start = time.time()
@@ -518,8 +522,7 @@ def initialize_sim():
     if not os.path.exists('annots'):
         os.mkdir('annots')
 
-    render_size = (64,64)
-    #render_size = (128,128)
+    render_size = (256,256)
     set_render_settings('CYCLES', render_size)
     clear_scene()
     clear_actions_frames()
@@ -548,29 +551,27 @@ def take_push_action(pusher, noodles, push_start_2d=None, push_end_2d=None):
     if push_start_2d is None and push_end_2d is None:
         hull_2d, center_2d, furthest_2d, area, densest_3d = noodle_state(noodles)
     add_softbody_physics(noodles)
-    #push_duration = 10
-    push_duration = 20
+    push_duration = 15
     lift_duration = 5
-    if push_start_2d is None and push_end_2d is None:
-        start = push(pusher, push_duration, lift_duration, furthest_2d, center_2d, hull_2d, densest_3d)
-    else:
-        start = push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d)
+    pixels = push(pusher, push_duration, lift_duration, furthest_2d, center_2d, hull_2d, densest_3d)
+    return pixels
 
 def take_twirl_action(fork, noodles):
     freeze_softbody_physics(noodles)
     densest_3d, angle = densest_point_angle(noodles)
     add_softbody_physics(noodles)
-    down_duration = 5
-    #twirl_duration = 20
-    twirl_duration = 10
-    #lift_duration = 20
+    down_duration = 10
+    twirl_duration = 13
+    #down_duration = 5
+    #twirl_duration = 10
     lift_duration = 10
     wait_duration = 10
-    twirl(fork, down_duration, twirl_duration, lift_duration, wait_duration, densest_3d, angle)
+    pixels = twirl(fork, down_duration, twirl_duration, lift_duration, wait_duration, densest_3d, angle)
     freeze_softbody_physics(noodles)
     remove_picked_up(noodles)
     add_softbody_physics(noodles)
     reset_fork(fork)
+    return pixels
 
 
 def generate_dataset(episodes, pusher, fork):

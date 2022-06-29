@@ -18,19 +18,17 @@ from sklearn.neighbors import NearestNeighbors
 from gym import Env, spaces
 from render import *
 
-class SpaghettiEnv(Env):
+class GroupingEnv(Env):
     def __init__(self):
-        super(SpaghettiEnv, self).__init__()
-        # Define a 2-D observation space
-        self.blender_render_size = (256,256,3)
+        super(GroupingEnv, self).__init__()
         self.observation_shape = (64, 64, 3)
-        #self.observation_shape = (128, 128, 3)
         self.observation_space = spaces.Box(low = np.zeros(self.observation_shape), 
                                             high = np.ones(self.observation_shape),
                                             dtype = np.float16)
+
+        self.action_high = np.array([3.0, 3.0, 0.3, 0.3], dtype=np.float32)
+        self.action_space = spaces.Box(low=-self.action_high, high=self.action_high, dtype=np.float32)
         
-        # Define an action space ranging from 0 to 2
-        self.action_space = spaces.Discrete(2,) # push or group
         self.noodles = None
         self.pusher, self.fork = initialize_sim()
         self.current_render = None
@@ -38,12 +36,11 @@ class SpaghettiEnv(Env):
         self.max_action_count = 10
         self.initial_num_noodles = 0
     
-    def reset(self, deterministic=False):
+    def reset(self):
         self.action_ctr = 0
-        #num_noodles = np.random.randint(5,20)
-        num_noodles = 20
+        num_noodles = np.random.randint(5,20)
         self.initial_num_noodles = num_noodles
-        self.noodles = reset_sim(self.pusher, self.fork, num_noodles, deterministic=deterministic)
+        self.noodles = reset_sim(self.pusher, self.fork, num_noodles)
         obs = render(0)
         self.current_render = obs
         return obs
@@ -64,54 +61,47 @@ class SpaghettiEnv(Env):
         
     def step(self, action):
         # Flag that marks the termination of an episode
-        action = int(action)
         
+        action = np.clip(action, -self.action_high, self.action_high)
         # Assert that it is a valid action 
         assert self.action_space.contains(action), "Invalid Action"
 
-        initial_area, initial_num_noodles = get_coverage_pickup_stats(self.noodles)
+        initial_area, _ = get_coverage_pickup_stats(self.noodles)
 
-        if action == 0:
-            action_pixels = take_push_action(self.pusher, self.noodles)
-        elif action == 1:
-            action_pixels = take_twirl_action(self.fork, self.noodles)
+        take_push_action(self.pusher, self.noodles, action[:2], action[2:])
 
         area, num_noodles = get_coverage_pickup_stats(self.noodles)
 
-        pickup_reward = initial_num_noodles - num_noodles # reward for picking up noodles
-        area_reward = initial_area - area # reward for minimizing coverage
-        reward = 2*area_reward + pickup_reward
+        reward = initial_area - area
 
         obs = render(0)
         self.current_render = obs
         self.action_ctr += 1
 
-
-        #print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
-        #        'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[action]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
-
-        print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
-                'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[int(action)]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
+        print('\ninitial #: %d, '%self.initial_num_noodles, \
+                'action %d: %s, '%(self.action_ctr, str(np.round(action, 2).tolist())), 'reward: %f, '%reward)
 
         done = (self.action_ctr >= self.max_action_count) or (num_noodles <= 0)
         if done:
             clear_noodles()
 
-        return obs, reward, done, (np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0]), self.initial_num_noodles - num_noodles)
+        return obs, reward, done, None
 
 if __name__ == '__main__':
-    env = SpaghettiEnv()
+    env = GroupingEnv()
     obs = env.reset()
     env.render()
 
     images = [obs]
     actions = [0]
+    rewards = [0.0]
     while True:
         # Take a random action
         action = env.action_space.sample()
         obs, reward, done, info = env.step(action)
         images.append(obs)
         actions.append(action)
+        rewards.append(reward)
 
         if done == True:
             break
@@ -122,8 +112,9 @@ if __name__ == '__main__':
     env.close()
 
     print('done, showing states')
-    for action,img in zip(actions,images):
-        cv2.putText(img, str(action), (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 1, cv2.LINE_AA)
+    for action,img,reward in zip(actions,images,rewards):
+        print(action,reward)
+        cv2.putText(img, 'R: %.2f'%reward, (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,0), 1, cv2.LINE_AA)
         cv2.imshow('img', img)
         cv2.waitKey(0)
 

@@ -8,10 +8,11 @@ import bmesh
 from math import pi
 import os
 import sys
-sys.path.append(os.getcwd())
 
 from scipy.spatial import ConvexHull, convex_hull_plot_2d
 from sklearn.neighbors import NearestNeighbors
+
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def add_camera_light():
     bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,0))
@@ -60,9 +61,10 @@ def set_render_settings(engine, render_size, generate_masks=True):
     scene.cycles.transparent_max_bounces = 1
     scene.cycles.transparent_min_bounces = 1
     scene.view_layers["View Layer"].use_pass_object_index = True
-    scene.render.tile_x = 16
-    scene.render.tile_y = 16
+    scene.render.tile_x = 256
+    scene.render.tile_y = 256
     scene.render.use_persistent_data = True
+    scene.cycles.device = 'GPU'
 
 def initialize_renderer():
     scene = bpy.context.scene

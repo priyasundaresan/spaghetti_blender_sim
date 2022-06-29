@@ -88,13 +88,28 @@ def visualize_episode(frames, episode, path, name):
     _, H, W, _ = frames.shape
     writer = cv2.VideoWriter(
         str(pathlib.Path(path)/f'{name}.mp4'),
-        cv2.VideoWriter_fourcc(*'mp4v'), 0.5, (W, H), True
+        cv2.VideoWriter_fourcc(*'mp4v'), 0.5, (W*2, H*2), True
     )
     for i, frame in enumerate(frames[..., ::-1]):
-        action = episode.u[i].argmax()
+        #print(i, len(frames))
+        #action = episode.u[i].argmax()
+        action = episode.u[i]
         reward = episode.r[i]
+
+        action_pixels = episode.action_pixels[i]
         vis = frame.copy()
-        #cv2.putText(vis, 'Reward: %.2f'%reward, (10,25), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (255,255,0), 1, cv2.LINE_AA)
+        H,W,C = vis.shape
+        if len(action_pixels)>1:
+            u1,v1 = action_pixels.astype(int)[0]
+            u2,v2 = action_pixels.astype(int)[1]
+            cv2.line(vis, (u1, H-v1), (u2, H-v2), (255,0,0), 2)
+        else:
+            u1,v1 = action_pixels.astype(int)[0]
+            cv2.circle(vis, (u1, H-v1), 2, (255,0,0), -1)
+        vis = cv2.resize(vis, (W*2, H*2))
+        cv2.putText(vis, '%s'%mapping[action], (10,15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,0), 1, cv2.LINE_AA)
+        cv2.putText(vis, 'Reward: %.2f'%reward, (10,25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,0), 1, cv2.LINE_AA)
+
         writer.write(vis)
     writer.release()
 
@@ -225,13 +240,14 @@ class TorchImageEnvWrapper:
     Torch Env Wrapper that wraps a gym env and makes interactions using Tensors.
     Also returns observations in image form.
     """
-    def __init__(self, env, bit_depth, observation_shape=None, act_rep=2):
+    def __init__(self, env, bit_depth, observation_shape=None, act_rep=2, discrete=True):
         self.env = env
         self.bit_depth = bit_depth
         self.action_repeats = act_rep
+        self.discrete = discrete
 
-    def reset(self):
-        self.env.reset()
+    def reset(self, deterministic=False):
+        self.env.reset(deterministic=deterministic)
         x = to_tensor_obs(self.env.render(mode='rgb_array'))
         preprocess_img(x, self.bit_depth)
         return x
@@ -246,7 +262,8 @@ class TorchImageEnvWrapper:
         return x, rwds, d, i
 
     def render(self):
-        self.env.render()
+        return to_tensor_obs(self.env.render(mode='rgb_array'))
+        #return self.env.render(mode)
 
     def close(self):
         self.env.close()
@@ -258,7 +275,10 @@ class TorchImageEnvWrapper:
 
     @property
     def action_size(self):
-        return self.env.action_space.shape[0]
+        if self.discrete:
+            return 1
+        else:
+            return self.env.action_space.shape[0]
 
     def sample_random_action(self):
         return torch.tensor(self.env.action_space.sample())
