@@ -40,7 +40,8 @@ class SpaghettiEnv(Env):
     
     def reset(self):
         self.action_ctr = 0
-        num_noodles = np.random.randint(5,20)
+        #num_noodles = np.random.randint(5,20)
+        num_noodles = 20
         self.initial_num_noodles = num_noodles
         self.noodles = reset_sim(self.pusher, self.fork, num_noodles)
         obs = render(0)
@@ -85,10 +86,6 @@ class SpaghettiEnv(Env):
         self.current_render = obs
         self.action_ctr += 1
 
-
-        #print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
-        #        'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[action]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
-
         print('\ninitial #: %d, '%self.initial_num_noodles, 'curr #: %d, '%num_noodles, \
                 'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[int(action)]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
 
@@ -96,7 +93,10 @@ class SpaghettiEnv(Env):
         if done:
             clear_noodles()
 
-        return obs, reward, done, np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
+        action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
+        total_noodle_pickup = self.initial_num_noodles - num_noodles
+
+        return obs, reward, done, (action_pixels, total_noodle_pickup)
 
 if __name__ == '__main__':
     env = SpaghettiEnv()

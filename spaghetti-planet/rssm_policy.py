@@ -91,6 +91,7 @@ class RSSMPolicy:
         with torch.no_grad():
             self._poll(observation)
             if explore:
-                if random.random() < 0.3:
+                #if random.random() < 0.3:
+                if random.random() < 0.5:
                     self.a = 1-self.a
             return self.a

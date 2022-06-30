@@ -105,18 +105,30 @@ def main():
         device=device
     )
 
+    #rollout_gen = RolloutGenerator(
+    #    env,
+    #    device,
+    #    policy=policy,
+    #    episode_gen=lambda : Episode(partial(postprocess_img, depth=5)),
+    #    max_episode_steps=100,
+    #)
+
     rollout_gen = RolloutGenerator(
         env,
         device,
         policy=policy,
         episode_gen=lambda : Episode(partial(postprocess_img, depth=5)),
-        max_episode_steps=100,
+        max_episode_steps=env.env.max_action_count,
     )
     mem = Memory(100)
     mem.append(rollout_gen.rollout_n(1, random_policy=True))
     res_dir = 'results/'
     summary = TensorBoardMetrics(f'{res_dir}/')
+    #for i in trange(100, desc='Epoch', leave=False):
+    act_sequences = []
+    #for i in trange(100, desc='Epoch', leave=False):
     for i in trange(100, desc='Epoch', leave=False):
+        print('\nEPOCH: %d'%i)
         metrics = {}
         for _ in trange(150, desc='Iter ', leave=False):
             train_metrics = train(mem, rssm_model.train(), optimizer, device)
@@ -128,16 +140,21 @@ def main():
         
         summary.update(metrics)
         mem.append(rollout_gen.rollout_once(explore=True))
-        eval_episode, eval_frames, eval_metrics = rollout_gen.rollout_eval()
+        eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_eval()
+        act_sequences.append(eval_act_seq)
         mem.append(eval_episode)
         #save_video(eval_frames, res_dir, f'vid_{i+1}')
         visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
         #print(eval_episode, eval_frames, eval_metrics)
-        #summary.update(eval_metrics)
+        try:
+            summary.update(eval_metrics)
+        except:
+            continue
 
         if (i + 1) % 25 == 0:
             torch.save(rssm_model.state_dict(), f'{res_dir}/ckpt_{i+1}.pth')
 
+    np.save(f'{res_dir}/eval_act_seqs.npy', np.array(act_sequences)) 
     print('DONE')
 
     #pdb.set_trace()

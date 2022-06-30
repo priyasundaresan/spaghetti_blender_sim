@@ -264,12 +264,12 @@ def push(pusher, push_duration, lift_duration, push_start_2d, push_end_2d, hull_
     angle = np.arctan(offset[1]/offset[0])
 
     push_start_2d -= offset*0.15
-    pusher.location = np.array([push_start_2d[0], push_start_2d[1], 0.5])
+    pusher.location = np.array([push_start_2d[0], push_start_2d[1], 0.45])
     pusher.rotation_euler = (0,np.pi/2,angle)
     pusher.keyframe_insert(data_path="location", frame=start_frame)
     pusher.keyframe_insert(data_path="rotation_euler", frame=start_frame)
 
-    pusher.location = np.array([push_end_2d[0], push_end_2d[1], 0.6])
+    pusher.location = np.array([push_end_2d[0], push_end_2d[1], 0.45])
     pusher.rotation_euler = (0,np.pi/2,angle)
     pusher.keyframe_insert(data_path="location", frame=start_frame+push_duration)
     pusher.keyframe_insert(data_path="rotation_euler", frame=start_frame+push_duration)
@@ -535,9 +535,7 @@ def take_twirl_action(fork, noodles):
     densest_3d, angle = densest_point_angle(noodles)
     add_softbody_physics(noodles)
     down_duration = 5
-    #twirl_duration = 20
-    twirl_duration = 10
-    #lift_duration = 20
+    twirl_duration = 20
     lift_duration = 10
     wait_duration = 10
     pixels = twirl(fork, down_duration, twirl_duration, lift_duration, wait_duration, densest_3d, angle)

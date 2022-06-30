@@ -26,6 +26,7 @@ class RolloutGenerator:
         self.max_episode_steps = max_episode_steps
         if self.max_episode_steps is None:
             self.max_episode_steps = self.env.max_episode_steps
+        self.discount = 0.9
 
     def rollout_once(self, random_policy=False, explore=False) -> Episode:
         """Performs a single rollout of an environment given a policy
@@ -46,9 +47,12 @@ class RolloutGenerator:
                 act = self.policy.poll(obs.to(self.device), explore).flatten()
 
             if t == self.max_episode_steps-1:
-                act = 1
+                act = torch.Tensor([1.0])
 
-            nobs, reward, terminal, action_pixels = self.env.step(act)
+            nobs, reward, terminal, (action_pixels, total_noodle_pickup)  = self.env.step(act)
+
+            reward = self.discount**t * reward # priya new
+
             eps.append(obs, act, reward, terminal, action_pixels)
             obs = nobs
             if terminal:
@@ -72,14 +76,54 @@ class RolloutGenerator:
 
     def rollout_eval_n(self, n):
         metrics = defaultdict(list)
-        episodes, frames = [], []
+        episodes, frames, act_sequences = [], [], []
         for _ in range(n):
-            e, f, m = self.rollout_eval()
+            e, f, m, a = self.rollout_eval()
             episodes.append(e)
+            act_sequences.append(a)
             frames.append(f)
             for k, v in m.items():
                 metrics[k].append(v)
-        return episodes, frames, metrics
+        return episodes, frames, metrics, act_sequences
+
+    def rollout_baseline(self, policy=None):
+        eps = self.episode_gen()
+        obs = self.env.reset()
+        des = f'{self.name} Eval Ts'
+        frames = []
+        metrics = {}
+        act_r = []
+        act_seq = []
+        eps_reward = 0
+        eps_pickup = 0
+        for t in trange(self.max_episode_steps, desc=des, leave=False):
+            if policy is None:
+                act = self.env.sample_random_action()
+            else:
+                act = torch.Tensor([0.0]) if (t in [0,1,2,4,5,6,8]) else torch.Tensor([1.0])
+            if t == self.max_episode_steps-1:
+                # always twirl last
+                act = torch.Tensor([1.0])
+
+            nobs, reward, terminal, (action_pixels, total_noodle_pickup) = self.env.step(act)
+
+            reward = self.discount**t * reward # priya new
+
+            act_seq.append([act.item(), total_noodle_pickup])
+            frames.append(make_grid([nobs + 0.5], nrow=1).numpy())
+            eps.append(obs, act, reward, terminal, action_pixels)
+            print('\neval step %d:'%t, act.item(), reward, terminal, total_noodle_pickup)
+            act_r.append(reward)
+            eps_reward += reward
+            eps_pickup = total_noodle_pickup
+            obs = nobs
+            if terminal:
+                eps.append(self.env.render(), act, reward, terminal, action_pixels)
+                break
+        eps.terminate(nobs)
+        metrics['eval/episode_reward'] = eps_reward
+        metrics['eval/noodle_pickup'] = eps_pickup
+        return eps, np.stack(frames), metrics, act_seq
 
     def rollout_eval(self):
         assert self.policy is not None, 'Policy is None!!'
@@ -91,7 +135,9 @@ class RolloutGenerator:
         metrics = {}
         rec_losses = []
         pred_r, act_r = [], []
+        act_seq = []
         eps_reward = 0
+        eps_pickup = 0
         for t in trange(self.max_episode_steps, desc=des, leave=False):
             with torch.no_grad():
                 act = self.policy.poll(obs.to(self.device)).flatten()
@@ -106,21 +152,30 @@ class RolloutGenerator:
                 ).cpu().flatten().item())
 
             if t == self.max_episode_steps-1:
-                act = 1
+                # always twirl last
+                act = torch.Tensor([1.0])
 
-            nobs, reward, terminal, action_pixels = self.env.step(act)
+            nobs, reward, terminal, (action_pixels, total_noodle_pickup) = self.env.step(act)
+
+            print('\nDISCOUNTED REWARD', reward, self.discount**t)
+            reward = self.discount**t * reward # priya new
+
+            act_seq.append([act.item(), total_noodle_pickup])
+
             eps.append(obs, act, reward, terminal, action_pixels)
-            print('eval:', act.argmax(), reward, terminal, action_pixels)
+            print('\neval step %d:'%t, act.item(), reward, terminal, total_noodle_pickup)
             act_r.append(reward)
             eps_reward += reward
+            eps_pickup = total_noodle_pickup
             obs = nobs
             if terminal:
                 eps.append(self.env.render(), act, reward, terminal, action_pixels)
                 break
         eps.terminate(nobs)
         metrics['eval/episode_reward'] = eps_reward
+        metrics['eval/noodle_pickup'] = eps_pickup
         metrics['eval/reconstruction_loss'] = rec_losses
         metrics['eval/reward_pred_loss'] = abs(
             np.array(act_r)[:-1] - np.array(pred_r)[1:]
         )
-        return eps, np.stack(frames), metrics
+        return eps, np.stack(frames), metrics, act_seq
