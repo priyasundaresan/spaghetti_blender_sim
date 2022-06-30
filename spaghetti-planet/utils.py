@@ -95,6 +95,7 @@ def visualize_episode(frames, episode, path, name):
         #action = episode.u[i].argmax()
         action = episode.u[i]
         reward = episode.r[i]
+
         action_pixels = episode.action_pixels[i]
         vis = frame.copy()
         H,W,C = vis.shape
@@ -108,6 +109,7 @@ def visualize_episode(frames, episode, path, name):
         vis = cv2.resize(vis, (W*2, H*2))
         cv2.putText(vis, '%s'%mapping[action], (10,15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,0), 1, cv2.LINE_AA)
         cv2.putText(vis, 'Reward: %.2f'%reward, (10,25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,0), 1, cv2.LINE_AA)
+
         writer.write(vis)
     writer.release()
 
@@ -244,8 +246,8 @@ class TorchImageEnvWrapper:
         self.action_repeats = act_rep
         self.discrete = discrete
 
-    def reset(self):
-        self.env.reset()
+    def reset(self, deterministic=False):
+        self.env.reset(deterministic=deterministic)
         x = to_tensor_obs(self.env.render(mode='rgb_array'))
         preprocess_img(x, self.bit_depth)
         return x

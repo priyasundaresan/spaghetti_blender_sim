@@ -129,7 +129,8 @@ class RolloutGenerator:
         assert self.policy is not None, 'Policy is None!!'
         self.policy.reset()
         eps = self.episode_gen()
-        obs = self.env.reset()
+        #obs = self.env.reset()
+        obs = self.env.reset(deterministic=True)
         des = f'{self.name} Eval Ts'
         frames = []
         metrics = {}
