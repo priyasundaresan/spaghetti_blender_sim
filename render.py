@@ -560,10 +560,8 @@ def take_twirl_action(fork, noodles):
     freeze_softbody_physics(noodles)
     densest_3d, angle = densest_point_angle(noodles)
     add_softbody_physics(noodles)
-    #down_duration = 5
-    #twirl_duration = 20
-    down_duration = 10
-    twirl_duration = 13
+    down_duration = 5
+    twirl_duration = 20
     lift_duration = 10
     wait_duration = 10
     pixels = twirl(fork, down_duration, twirl_duration, lift_duration, wait_duration, densest_3d, angle)

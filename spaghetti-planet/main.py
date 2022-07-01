@@ -146,6 +146,7 @@ def main():
         #save_video(eval_frames, res_dir, f'vid_{i+1}')
         visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
         #print(eval_episode, eval_frames, eval_metrics)
+        np.savez_compressed('results/%03d.npz'%(i), act_seq=eval_act_seq)
         try:
             summary.update(eval_metrics)
         except:
