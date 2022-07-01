@@ -95,8 +95,9 @@ class SpaghettiEnv(Env):
 
         action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
         total_noodle_pickup = self.initial_num_noodles - num_noodles
+        total_coverage = area
 
-        return obs, reward, done, (action_pixels, total_noodle_pickup)
+        return obs, reward, done, (action_pixels, total_noodle_pickup, total_coverage)
 
 if __name__ == '__main__':
     env = SpaghettiEnv()

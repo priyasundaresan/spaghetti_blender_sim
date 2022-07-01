@@ -15,7 +15,7 @@ from utils import *
 from memory import *
 from rollout_generator import RolloutGenerator
 
-def main():
+def main(policy):
     env = SpaghettiEnv()
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
 
@@ -28,7 +28,7 @@ def main():
         episode_gen=lambda : Episode(partial(postprocess_img, depth=5)),
         max_episode_steps=env.env.max_action_count,
     )
-    res_dir = 'results_random/'
+    res_dir = 'results_%s/'%policy
 
     summary = TensorBoardMetrics(f'{res_dir}/')
 
@@ -36,7 +36,7 @@ def main():
     for i in trange(10, leave=False):
         print('\ROLLOUT: %d'%i)
         metrics = {}
-        eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_baseline(policy='heuristic')
+        eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_baseline(policy=policy)
         act_sequences.append(eval_act_seq)
         visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
         summary.update(eval_metrics)
@@ -45,4 +45,5 @@ def main():
     print('DONE')
 
 if __name__ == '__main__':
-    main()
+    #main('heuristic')
+    main('fixed')

@@ -49,13 +49,13 @@ class RolloutGenerator:
             if t == self.max_episode_steps-1:
                 act = torch.Tensor([1.0])
 
-            nobs, reward, terminal, (action_pixels, total_noodle_pickup)  = self.env.step(act)
+            nobs, reward, terminal, (action_pixels, total_noodle_pickup, total_coverage)  = self.env.step(act)
 
             reward = self.discount**t * reward # priya new
 
             eps.append(obs, act, reward, terminal, action_pixels)
             obs = nobs
-            if terminal:
+            if terminal or t == self.max_episode_steps - 1:
                 eps.append(self.env.render(), act, reward, terminal, action_pixels)
                 break
         eps.terminate(nobs)
@@ -88,7 +88,7 @@ class RolloutGenerator:
 
     def rollout_baseline(self, policy=None):
         eps = self.episode_gen()
-        obs = self.env.reset()
+        obs = self.env.reset(deterministic=True)
         des = f'{self.name} Eval Ts'
         frames = []
         metrics = {}
@@ -96,16 +96,21 @@ class RolloutGenerator:
         act_seq = []
         eps_reward = 0
         eps_pickup = 0
+        total_coverage = float('inf')
         for t in trange(self.max_episode_steps, desc=des, leave=False):
             if policy is None:
                 act = self.env.sample_random_action()
-            else:
+            elif policy=='fixed':
                 act = torch.Tensor([0.0]) if (t in [0,1,2,4,5,6,8]) else torch.Tensor([1.0])
+            elif policy=='heuristic':
+                print('\ntotal_coverage', total_coverage)
+                act = torch.Tensor([0.0]) if t==0 or total_coverage > 13 else torch.Tensor([1.0])
+
             if t == self.max_episode_steps-1:
                 # always twirl last
                 act = torch.Tensor([1.0])
 
-            nobs, reward, terminal, (action_pixels, total_noodle_pickup) = self.env.step(act)
+            nobs, reward, terminal, (action_pixels, total_noodle_pickup, total_coverage) = self.env.step(act)
 
             reward = self.discount**t * reward # priya new
 
@@ -156,7 +161,7 @@ class RolloutGenerator:
                 # always twirl last
                 act = torch.Tensor([1.0])
 
-            nobs, reward, terminal, (action_pixels, total_noodle_pickup) = self.env.step(act)
+            nobs, reward, terminal, (action_pixels, total_noodle_pickup, total_coverage) = self.env.step(act)
 
             print('\nDISCOUNTED REWARD', reward, self.discount**t)
             reward = self.discount**t * reward # priya new
@@ -169,7 +174,7 @@ class RolloutGenerator:
             eps_reward += reward
             eps_pickup = total_noodle_pickup
             obs = nobs
-            if terminal:
+            if terminal or t == self.max_episode_steps - 1:
                 eps.append(self.env.render(), act, reward, terminal, action_pixels)
                 break
         eps.terminate(nobs)
