@@ -28,11 +28,12 @@ def img_inference(cv_img, policy):
     obs = to_tensor_obs(cv_img)
     act = policy.poll(obs.to(device)).flatten()
     vis = cv_img.copy()
-    cv2.putText(vis, '%s'%mapping[act.item()], (10,15), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,0), 1, cv2.LINE_AA)
+    cv2.putText(vis, '%s'%mapping[act.item()], (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,0), 1, cv2.LINE_AA)
     return act, vis
 
 def eval(path_to_checkpoint, imgs_dir):
     if not os.path.exists('preds'):
+        print('here')
         os.mkdir('preds')
 
     rssm_model = RecurrentStateSpaceModel(action_size).to(device)
@@ -51,7 +52,7 @@ def eval(path_to_checkpoint, imgs_dir):
     for idx, fn in enumerate(os.listdir(imgs_dir)):
         img = cv2.imread(os.path.join(imgs_dir, fn))
         act, vis = img_inference(img, policy)
-        cv2.imwrite('%s/%03d.jpg'%idx, vis)
+        cv2.imwrite('preds/%03d.jpg'%idx, vis)
         print(act)
     
     #rollout_gen = RolloutGenerator(
