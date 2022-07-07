@@ -29,6 +29,7 @@ class RSSMPolicy:
         self.state_size = self.rssm.state_size
         self.latent_size = self.rssm.latent_size
         self.binary_actions = enumerate_binary_actions(self.H, self.device)
+        self.discount = 0.9
 
     def reset(self):
         self.h = torch.zeros(1, self.state_size).to(self.device)
@@ -77,10 +78,14 @@ class RSSMPolicy:
         h_t = self.h.clone().expand(self.N, -1)
         s_t = self.s.clone().expand(self.N, -1)
         #for a_t in torch.unbind(actions, dim=1):
+
+        t = 0
         for a_t in torch.unbind(self.binary_actions, dim=1):
             h_t = self.rssm.deterministic_state_fwd(h_t, s_t, a_t)
             s_t = self.rssm.state_prior(h_t, sample=True)
-            rwds += self.rssm.pred_reward(h_t, s_t)
+            pred_reward = self.rssm.pred_reward(h_t, s_t)
+            rwds += pred_reward*(self.discount**t)
+            t += 1
         _, k = torch.topk(rwds, self.K, dim=0, largest=True, sorted=False)
         best_action_seq = self.binary_actions[k].squeeze()
         best_action = best_action_seq[0].view(self.a.shape)

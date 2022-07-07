@@ -26,7 +26,7 @@ class RolloutGenerator:
         self.max_episode_steps = max_episode_steps
         if self.max_episode_steps is None:
             self.max_episode_steps = self.env.max_episode_steps
-        self.discount = 0.9
+        #self.discount = 0.9
 
     def rollout_once(self, random_policy=False, explore=False) -> Episode:
         """Performs a single rollout of an environment given a policy
@@ -51,7 +51,7 @@ class RolloutGenerator:
 
             nobs, reward, terminal, (action_pixels, total_noodle_pickup, total_coverage)  = self.env.step(act)
 
-            reward = self.discount**t * reward # priya new
+            #reward = self.discount**t * reward # priya new
 
             eps.append(obs, act, reward, terminal, action_pixels)
             obs = nobs
@@ -112,7 +112,7 @@ class RolloutGenerator:
 
             nobs, reward, terminal, (action_pixels, total_noodle_pickup, total_coverage) = self.env.step(act)
 
-            reward = self.discount**t * reward # priya new
+            #reward = self.discount**t * reward # priya new
 
             act_seq.append([act.item(), total_noodle_pickup])
             frames.append(make_grid([nobs + 0.5], nrow=1).numpy())
@@ -163,8 +163,8 @@ class RolloutGenerator:
 
             nobs, reward, terminal, (action_pixels, total_noodle_pickup, total_coverage) = self.env.step(act)
 
-            print('\nDISCOUNTED REWARD', reward, self.discount**t)
-            reward = self.discount**t * reward # priya new
+            #print('\nDISCOUNTED REWARD', reward, self.discount**t)
+            #reward = self.discount**t * reward # priya new
 
             act_seq.append([act.item(), total_noodle_pickup])
 
