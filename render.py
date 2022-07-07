@@ -195,13 +195,14 @@ def get_coverage_pickup_stats(noodles):
     return coverage, num_noodles_left 
 
 def generate_heldout_noodle_state(num_noodles):
+    RANDOM_SEED = 3
     locations = []
     rotations = []
     for i in range(num_noodles):
-        np.random.seed(num_noodles+i)
+        np.random.seed(num_noodles+i+RANDOM_SEED)
         location = np.random.uniform(-1.1,1.1,3)
         location[2] = np.random.uniform(0.25,1.00)
-        np.random.seed(num_noodles+i)
+        np.random.seed(num_noodles+i+RANDOM_SEED)
         rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
         locations.append(location)
         rotations.append(rotation)
