@@ -83,7 +83,7 @@ def save_video(frames, path, name):
     writer.release()
 
 def visualize_episode(frames, episode, path, name):
-    mapping = {0: "Group", 1:"Twirl"}
+    mapping = {0: "Group", 1:"Acquire"}
     frames = (frames*255).clip(0, 255).astype('uint8').transpose(0, 2, 3, 1)
     _, H, W, _ = frames.shape
     writer = cv2.VideoWriter(
