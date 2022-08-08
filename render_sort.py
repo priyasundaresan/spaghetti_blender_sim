@@ -56,8 +56,8 @@ def set_render_settings(engine, render_size, generate_masks=True):
     scene.use_nodes = True
     scene.render.image_settings.file_format='JPEG'
     scene.view_settings.view_transform = 'Raw'
-    scene.eevee.taa_samples = 50
-    scene.eevee.taa_render_samples = 50
+    scene.eevee.taa_samples = 10
+    scene.eevee.taa_render_samples = 10
     scene.view_settings.exposure = 1.3
     bpy.ops.rigidbody.world_add()
     bpy.context.scene.rigidbody_world.point_cache.frame_end = 2000
@@ -539,7 +539,7 @@ def generate_dataset(episodes, pusher):
     items, colors = reset_sim(pusher, initial_items)
 
     rewards = []
-    for i in range(6):
+    for i in range(5):
         render(bpy.context.scene.frame_current-30)
         pick_item, place_point, push_start, push_end = get_action_candidates(items, colors)
 
