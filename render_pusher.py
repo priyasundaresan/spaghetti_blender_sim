@@ -103,6 +103,42 @@ def render(episode):
     #cv2.imwrite('masks/%05d.jpg'%episode, image)
     return image
 
+def make_walls(params):
+    dim = params["table_size"]
+
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(dim/2,0,0.5), rotation=(0,np.pi/2,0))
+    bpy.ops.rigidbody.object_add()
+    wall = bpy.context.object
+    wall.rigid_body.type = 'PASSIVE'
+    wall.rigid_body.friction = 1.0
+    wall.scale = (1,dim,1)
+    bpy.ops.object.modifier_add(type='COLLISION')
+
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(-dim/2,0,0.5), rotation=(0,np.pi/2,0))
+    bpy.ops.rigidbody.object_add()
+    wall = bpy.context.object
+    wall.rigid_body.type = 'PASSIVE'
+    wall.rigid_body.friction = 1.0
+    wall.scale = (1,dim,1)
+    bpy.ops.object.modifier_add(type='COLLISION')
+
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0,dim/2,0.5), rotation=(np.pi/2,0,0))
+    bpy.ops.rigidbody.object_add()
+    wall = bpy.context.object
+    wall.rigid_body.type = 'PASSIVE'
+    wall.rigid_body.friction = 1.0
+    wall.scale = (dim,1,1)
+    bpy.ops.object.modifier_add(type='COLLISION')
+
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0,-dim/2,0.5), rotation=(np.pi/2,0,0))
+    bpy.ops.rigidbody.object_add()
+    wall = bpy.context.object
+    wall.rigid_body.type = 'PASSIVE'
+    wall.rigid_body.friction = 1.0
+    wall.scale = (dim,1,1)
+    bpy.ops.object.modifier_add(type='COLLISION')
+
+    bpy.ops.object.select_all(action='DESELECT')
 
 def make_table(params):
     bpy.ops.mesh.primitive_plane_add(size=params["table_size"], location=(0,0,0))
@@ -161,8 +197,7 @@ def generate_heldout_pile_state(num_items):
     rotations = []
     for i in range(num_items):
         np.random.seed(num_items+i+RANDOM_SEED)
-        #location = np.random.uniform(-1.1,1.1,3)
-        location = np.random.uniform(-4,4,3)
+        location = np.random.uniform(-1.1,1.1,3)
         #location[2] = np.random.uniform(0.25,1.00)
         location[2] = np.random.uniform(0.15,0.25)
         np.random.seed(num_items+i+RANDOM_SEED)
@@ -177,7 +212,8 @@ def push(pusher, down_duration, push_duration, lift_duration, wait_duration, pus
     offset = push_end_2d - push_start_2d
     angle = np.arctan(offset[1]/offset[0])
 
-    push_start_2d -= offset*0.15
+    #push_start_2d -= offset*0.15
+    push_start_2d -= offset*0.05
 
     pusher.location = np.array([push_start_2d[0], push_start_2d[1], 2.0])
     pusher.rotation_euler = (0,np.pi/2,angle)
@@ -205,10 +241,11 @@ def push(pusher, down_duration, push_duration, lift_duration, wait_duration, pus
 
     for step in range(start_frame, start_frame+down_duration+push_duration+lift_duration+wait_duration):
         bpy.context.scene.frame_set(step)
-        #render(step-30)
+        render(step-30)
+        np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
     return pixels
 
-def scoop(pusher, scooper, down_duration, scoop_duration, lift_duration, wait_duration, densest_3d):
+def scoop(pusher, scooper, down_duration, scoop_duration, lift_duration, wait_duration, densest_3d, annot_dir='annots'):
     start_frame = bpy.context.scene.frame_current
     x,y,z = densest_3d
     angle = 0
@@ -258,8 +295,9 @@ def scoop(pusher, scooper, down_duration, scoop_duration, lift_duration, wait_du
     pixels = annotate([densest_3d])
 
     for step in range(start_frame, start_frame+down_duration+scoop_duration+lift_duration+wait_duration):
+        np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
         bpy.context.scene.frame_set(step)
-        #render(step-30)
+        render(step-30)
     return pixels
 
 def wait(wait_duration):
@@ -303,8 +341,9 @@ def initialize_sim():
     clear_scene()
     clear_actions_frames()
     camera = add_camera_light()
-    params = {"table_size":10}
+    params = {"table_size":6}
     make_table(params)
+    make_walls(params)
     initialize_renderer()
     pusher = make_pusher()
     reset_pusher(pusher)
@@ -387,6 +426,7 @@ def items_state(items):
 
 def densest_point(items):
     if len(items) == 1:
+        print('here priya')
         return items[0].matrix_world.translation
 
     points = []
@@ -470,7 +510,7 @@ def generate_dataset(episodes, pusher, scooper):
     initial_area, initial_num_items = get_coverage_pickup_stats(items)
     rewards = []
 
-    for i in range(10):
+    for i in range(5):
         render(bpy.context.scene.frame_current-30)
         #if random.random()<0.5:
         if i%2==0:
