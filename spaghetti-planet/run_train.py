@@ -9,6 +9,7 @@ if __name__ == '__main__':
     from pyvirtualdisplay import Display
     import os
     Display().start()
-    os.system('blender -P main.py')
+    os.system('blender -P main_pusher.py')
+    #os.system('blender -P main.py')
     #os.system('blender -P random_baseline.py')
     #os.system('blender -P heuristic_baseline.py')

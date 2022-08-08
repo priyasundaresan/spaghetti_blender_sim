@@ -1,6 +1,6 @@
 import random
-#import torch
-#import cv2
+import torch
+import cv2
 
 import bpy, bpy_extras
 import time
@@ -97,7 +97,7 @@ def render(episode):
     width = bpy.context.scene.render.resolution_x
     height = bpy.context.scene.render.resolution_y
     image = pixels.reshape(height,width,4)[:,:,:3]
-    #image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     #cv2.imshow('img', image)
     #cv2.waitKey(0)
     #cv2.imwrite('masks/%05d.jpg'%episode, image)
@@ -326,7 +326,8 @@ def take_push_action(pusher, scooper, items, push_start_2d=None, push_end_2d=Non
     if push_start_2d is None and push_end_2d is None:
         hull_2d, center_2d, furthest_2d, area, densest_3d = items_state(items)
     down_duration = lift_duration = 5
-    push_duration = 45
+    #push_duration = 45
+    push_duration = 80
     wait_duration = 20
     #pixels = push(pusher, push_duration, lift_duration, furthest_2d, center_2d, hull_2d, densest_3d)
     pixels = push(pusher, down_duration, push_duration, lift_duration, wait_duration, furthest_2d, center_2d, hull_2d, densest_3d)
