@@ -1,6 +1,6 @@
 import random
-#import torch
-#import cv2
+import torch
+import cv2
 
 import bpy, bpy_extras
 import time
@@ -22,8 +22,8 @@ BLUE_RECEPTACLE_LOC = (-5,0,0)
 def add_camera_light():
     bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,0))
     #bpy.ops.object.camera_add(location=(0,0,8), rotation=(0,0,0))
-    #bpy.ops.object.camera_add(location=(0,0,20), rotation=(0,0,0))
-    bpy.ops.object.camera_add(location=(0,-5,20), rotation=(np.deg2rad(18.5),0,0))
+    bpy.ops.object.camera_add(location=(0,0,18), rotation=(0,0,0))
+    #bpy.ops.object.camera_add(location=(0,-5,20), rotation=(np.deg2rad(18.5),0,0))
     bpy.context.scene.camera = bpy.context.object
 
 def clear_scene():
@@ -45,7 +45,6 @@ def clear_scene():
     bpy.ops.object.delete()
 
 def set_render_settings(engine, render_size, generate_masks=True):
-    # Set rendering engine, dimensions, colorspace, images settings
     scene = bpy.context.scene
     scene.world.color = (1, 1, 1)
     scene.render.resolution_percentage = 100
@@ -55,10 +54,37 @@ def set_render_settings(engine, render_size, generate_masks=True):
     scene.render.resolution_y = render_height
     scene.use_nodes = True
     scene.render.image_settings.file_format='JPEG'
-    scene.view_settings.view_transform = 'Raw'
-    scene.eevee.taa_samples = 10
-    scene.eevee.taa_render_samples = 10
     scene.view_settings.exposure = 1.3
+    scene.render.image_settings.file_format='JPEG'
+    scene.cycles.samples = 200
+    scene.view_settings.view_transform = 'Raw'
+    scene.cycles.max_bounces = 1
+    scene.cycles.min_bounces = 1
+    scene.cycles.glossy_bounces = 1
+    scene.cycles.transmission_bounces = 1
+    scene.cycles.volume_bounces = 1
+    scene.cycles.transparent_max_bounces = 1
+    scene.cycles.transparent_min_bounces = 1
+    scene.view_layers[0].use_pass_object_index = True
+    scene.render.use_persistent_data = True
+    scene.cycles.device = 'GPU'
+
+
+    ## Set rendering engine, dimensions, colorspace, images settings
+    #scene = bpy.context.scene
+    #scene.world.color = (1, 1, 1)
+    #scene.render.resolution_percentage = 100
+    #scene.render.engine = engine
+    #render_width, render_height = render_size
+    #scene.render.resolution_x = render_width
+    #scene.render.resolution_y = render_height
+    #scene.use_nodes = True
+    #scene.render.image_settings.file_format='JPEG'
+    #scene.view_settings.view_transform = 'Raw'
+    #scene.eevee.taa_samples = 10
+    #scene.eevee.taa_render_samples = 10
+    #scene.view_settings.exposure = 1.3
+
     bpy.ops.rigidbody.world_add()
     bpy.context.scene.rigidbody_world.point_cache.frame_end = 2000
     bpy.context.scene.frame_end = 2000
@@ -81,7 +107,7 @@ def render(episode):
     width = bpy.context.scene.render.resolution_x
     height = bpy.context.scene.render.resolution_y
     image = pixels.reshape(height,width,4)[:,:,:3]
-
+    image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     #cv2.imshow('img', image)
     #cv2.waitKey(0)
     #cv2.imwrite('masks/%05d.jpg'%episode, image)
@@ -151,7 +177,7 @@ def make_pusher():
 
 def push(pusher, down_duration, push_duration, lift_duration, wait_duration, push_start, push_end, annot_dir='annots'):
     start_frame = bpy.context.scene.frame_current
-    print('START_FRAME', start_frame)
+    #print('START_FRAME', start_frame)
 
     push_start_2d = push_start[:2]
     push_end_2d = push_end[:2].astype('float')
@@ -193,7 +219,7 @@ def push(pusher, down_duration, push_duration, lift_duration, wait_duration, pus
 
 def pick_place(pick_item, transport_time, wait_duration, place_point, annot_dir='annots'):
     start_frame = bpy.context.scene.frame_current
-    print('START_FRAME', start_frame)
+    #print('START_FRAME', start_frame)
 
     pick_2d = pick_item.matrix_world.translation[:2]
     place_2d = place_point[:2]
@@ -287,7 +313,7 @@ def clear_items():
     delete_objs(objs)
 
 def reset_pusher(pusher):
-    pusher.location = (0,0,15)
+    pusher.location = (0,0,22)
     pusher.rotation_euler = (0,np.pi/2,0)
     pusher.keyframe_insert(data_path="location", frame=bpy.context.scene.frame_current)
     pusher.keyframe_insert(data_path="rotation_euler", frame=bpy.context.scene.frame_current)
@@ -299,7 +325,8 @@ def initialize_sim():
         os.mkdir('annots')
 
     render_size = (256,256)
-    set_render_settings('BLENDER_EEVEE', render_size)
+    set_render_settings('CYCLES', render_size)
+    #set_render_settings('BLENDER_EEVEE', render_size)
     clear_scene()
     clear_actions_frames()
     camera = add_camera_light()
@@ -316,7 +343,7 @@ def reset_sim(pusher, num_items, deterministic=False):
     reset_pusher(pusher)
     clear_actions_frames()
     items, colors = make_pile(num_items, deterministic=deterministic, settle_time=30)
-    print(bpy.context.scene.frame_current)
+    #print(bpy.context.scene.frame_current)
     return items, colors
 
 def make_pile(num_items, deterministic=False, settle_time=30):
@@ -424,7 +451,7 @@ def closest_point(items, point):
 
 def densest_point(items):
     if len(items) == 1:
-        print('here priya')
+        #print('here priya')
         return items[0].matrix_world.translation
 
     points = []
@@ -505,7 +532,7 @@ def get_reward_stats(items, colors):
     for item, color in zip(items,colors):
         dist_to_red_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - RED_RECEPTACLE_LOC)
         dist_to_blue_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - BLUE_RECEPTACLE_LOC)
-        print('dist', dist_to_red_receptacle, dist_to_blue_receptacle)
+        #print('dist', dist_to_red_receptacle, dist_to_blue_receptacle)
         if dist_to_red_receptacle < THRESH:
             if color == 'red':
                 red_correct += 1
@@ -554,10 +581,10 @@ def generate_dataset(episodes, pusher):
 
         result = get_reward_stats(items, colors)
         rewards.append(result)
-    print('REWARDS')
+    #print('REWARDS')
 
-    print('red_correct, red_incorrect, blue_correct, blue_incorrect')
-    print(rewards)
+    #print('red_correct, red_incorrect, blue_correct, blue_incorrect')
+    #print(rewards)
         #area, num_items = get_coverage_pickup_stats(items)
         #rewards.append([initial_area-area, initial_num_items - num_items])
         #initial_area = area

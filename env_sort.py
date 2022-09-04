@@ -13,15 +13,13 @@ from math import pi
 import os
 import sys
 sys.path.append(os.getcwd())
-from scipy.spatial import ConvexHull, convex_hull_plot_2d
-from sklearn.neighbors import NearestNeighbors
 from gym import Env, spaces
-from render_pusher import *
+from render_sort import *
 from scipy.interpolate import interp1d
 
-class BimanualAcquisEnv(Env):
+class BlockSortEnv(Env):
     def __init__(self):
-        super(BimanualAcquisEnv, self).__init__()
+        super(BlockSortEnv, self).__init__()
         # Define a 2-D observation space
         self.blender_render_size = (256,256,3)
         self.observation_shape = (64, 64, 3)
@@ -32,7 +30,7 @@ class BimanualAcquisEnv(Env):
         # Define an action space ranging from 0 to 2
         self.action_space = spaces.Discrete(2,) # push or group
         self.items = None
-        self.pusher, self.scooper = initialize_sim()
+        self.pusher = initialize_sim()
         self.current_render = None
         self.action_ctr = 0
         self.max_action_count = 10
@@ -40,10 +38,9 @@ class BimanualAcquisEnv(Env):
     
     def reset(self, deterministic=False):
         self.action_ctr = 0
-        #num_noodles = np.random.randint(5,20)
-        num_items = 12
+        num_items = 10
         self.initial_num_items = num_items
-        self.items = reset_sim(self.pusher, self.scooper, num_items, deterministic=deterministic)
+        self.items, self.colors = reset_sim(self.pusher, num_items, deterministic=deterministic)
         obs = render(0)
         self.current_render = obs
         return obs
@@ -57,7 +54,7 @@ class BimanualAcquisEnv(Env):
             return self.current_render
 
     def get_action_meanings(self):
-        return {0: "Group", 1: "Scoop"}
+        return {0: "Pick-Place", 1: "Push"}
 
     def close(self):
         cv2.destroyAllWindows()
@@ -69,53 +66,40 @@ class BimanualAcquisEnv(Env):
         # Assert that it is a valid action 
         assert self.action_space.contains(action), "Invalid Action"
 
-        initial_area, initial_num_items = get_coverage_pickup_stats(self.items)
+        red_correct_prev, red_incorrect_prev, blue_correct_prev, blue_incorrect_prev = get_reward_stats(self.items, self.colors)
+        pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
 
         if action == 0:
-            self.items, action_pixels = take_push_action(self.pusher, self.scooper, self.items)
+            action_pixels = take_pick_place_action(pick_item, place_point)
         elif action == 1:
-            self.items, action_pixels = take_scoop_action(self.pusher, self.scooper, self.items)
+            action_pixels = take_push_action(self.pusher, push_start, push_end, self.items)
 
-        area, num_items = get_coverage_pickup_stats(self.items)
+        red_correct, red_incorrect, blue_correct, blue_incorrect = get_reward_stats(self.items, self.colors)
+        pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
 
-        pickup_reward = initial_num_items - num_items # reward for picking up noodles
-        area_reward = initial_area - area # reward for minimizing coverage
+        correct_reward = (red_correct - red_correct_prev) + (blue_correct - blue_correct_prev)
+        incorrect_reward = (red_incorrect - red_incorrect_prev) + (blue_incorrect - blue_incorrect_prev)
 
-        #pickup_interp = interp1d([0,self.initial_num_items],[-5,5],kind='quadratic')
+        reward = 1*correct_reward + -10*incorrect_reward
 
-        #if pickup_reward:
-        #    area_reward = 0
-        #
-        #if pickup_reward == 1:
-        #    pickup_reward = -5
-
-        if pickup_reward == 1:
-            pickup_reward = -5
-
-        reward = 2*area_reward + pickup_reward
-
+        #print(bpy.context.scene.frame_current)
         obs = render(0)
         self.current_render = obs
         self.action_ctr += 1
 
-        print('\ninitial #: %d, '%self.initial_num_items, 'curr #: %d, '%num_items, \
-                'action %d: %s, '%(self.action_ctr, self.get_action_meanings()[int(action)]), 'area reward: %f, '%area_reward, 'pickup_reward: %d'%pickup_reward, 'reward: %f'%reward)
+        print('\naction %d: %s, '%(self.action_ctr, self.get_action_meanings()[int(action)]), 'reward: %f, '%reward, \
+                                   '\nred_correct: %d'%red_correct, 'red_incorrect: %d'%red_incorrect, \
+                                   'blue_correct: %d'%blue_correct, 'blue_incorrect: %d'%blue_incorrect)
 
-        done = (self.action_ctr >= self.max_action_count) or (num_items <= 0)
-
+        done = (self.action_ctr >= self.max_action_count) or (pick_item is None)
         if done:
             clear_items()
 
-        #action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
-        #action_pixels = np.array(action_pixels)*(self.observation_shape[0]/self.blender_render_size[0])
-        action_pixels = np.array(action_pixels)
-        total_item_pickup = self.initial_num_items - num_items
-        total_coverage = area
-
-        return obs, reward, done, (action_pixels, total_item_pickup, total_coverage)
+        action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
+        return obs, reward, done, (action_pixels, 0.0, 0.0)
 
 if __name__ == '__main__':
-    env = BimanualAcquisEnv()
+    env = BlockSortEnv()
     obs = env.reset()
     env.render()
 
@@ -135,11 +119,15 @@ if __name__ == '__main__':
         env.render()
 
     env.close()
+    
+    if not os.path.exists('images'):
+        os.mkdir('images')
 
     print('done, showing states')
-    for action,img in zip(actions,images):
+    for i,(action,img) in enumerate(zip(actions,images)):
         cv2.putText(img, str(action), (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 1, cv2.LINE_AA)
         print(img.shape)
+        cv2.imwrite('%s/%05d.jpg'%('images', i), img)
         #cv2.imshow('img', img)
         #cv2.waitKey(0)
 

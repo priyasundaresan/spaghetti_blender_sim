@@ -5,4 +5,4 @@ if __name__ == '__main__':
     import os
     Display().start()
     #os.system('blender -P env_pusher.py')
-    os.system('blender -P env_sort.py')
+    os.system('blender -P render_sort.py')

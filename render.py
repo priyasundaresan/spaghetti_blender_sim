@@ -194,8 +194,8 @@ def get_coverage_pickup_stats(noodles):
     num_noodles_left = len(noodles.data.splines)
     return coverage, num_noodles_left 
 
-def generate_heldout_noodle_state(num_noodles):
-    RANDOM_SEED = 3
+def generate_heldout_noodle_state(num_noodles, random_seed=0):
+    RANDOM_SEED = random_seed
     locations = []
     rotations = []
     for i in range(num_noodles):
@@ -245,12 +245,12 @@ def make_noodle(location=None, rotation=None):
 
     return path
 
-def make_noodle_pile(n_noodles, deterministic=False, settle_time=30):
+def make_noodle_pile(n_noodles, deterministic=False, settle_time=30, random_seed=0):
     noodles = []
     bpy.ops.object.select_all(action='DESELECT')
 
     if deterministic:
-        locations, rotations = generate_heldout_noodle_state(n_noodles)
+        locations, rotations = generate_heldout_noodle_state(n_noodles, random_seed=random_seed)
 
     for i in range(n_noodles):
         if deterministic:
@@ -540,10 +540,10 @@ def initialize_sim():
 
     return pusher, fork
 
-def reset_sim(pusher, fork, num_noodles, deterministic=False):
+def reset_sim(pusher, fork, num_noodles, deterministic=False, random_seed=0):
     reset_pusher(pusher)
     reset_fork(fork)
-    noodles = make_noodle_pile(num_noodles, deterministic=deterministic)
+    noodles = make_noodle_pile(num_noodles, deterministic=deterministic, random_seed=random_seed)
     clear_actions_frames()
     return noodles
 

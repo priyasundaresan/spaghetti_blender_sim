@@ -19,7 +19,9 @@ from sklearn.neighbors import NearestNeighbors
 def add_camera_light():
     bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,0))
     #bpy.ops.object.camera_add(location=(0,0,8), rotation=(0,0,0))
-    bpy.ops.object.camera_add(location=(0,0,12), rotation=(0,0,0))
+    #bpy.ops.object.camera_add(location=(0,0,12), rotation=(0,0,0))
+    bpy.ops.object.camera_add(location=(0,0,11), rotation=(0,0,0))
+    #bpy.ops.object.camera_add(location=(0,0,14), rotation=(0,0,0))
     bpy.context.scene.camera = bpy.context.object
 
 def clear_scene():
@@ -215,6 +217,7 @@ def push(pusher, down_duration, push_duration, lift_duration, wait_duration, pus
     #push_start_2d -= offset*0.15
     push_start_2d -= offset*0.05
 
+
     pusher.location = np.array([push_start_2d[0], push_start_2d[1], 2.0])
     pusher.rotation_euler = (0,np.pi/2,angle)
     pusher.keyframe_insert(data_path="location", frame=start_frame)
@@ -237,12 +240,15 @@ def push(pusher, down_duration, push_duration, lift_duration, wait_duration, pus
     
     pixels = annotate([[push_start_2d[0], push_start_2d[1], 0], [push_end_2d[0], push_end_2d[1], 0]])
 
+    if pixels[0][0] < 0 or pixels[0][1] < 0:
+        print('\n\nHERE', push_start_2d, push_end_2d, pixels)
+
     wait(wait_duration)
 
     for step in range(start_frame, start_frame+down_duration+push_duration+lift_duration+wait_duration):
         bpy.context.scene.frame_set(step)
-        render(step-30)
-        np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
+        #render(step-30)
+        #np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
     return pixels
 
 def scoop(pusher, scooper, down_duration, scoop_duration, lift_duration, wait_duration, densest_3d, annot_dir='annots'):
@@ -295,9 +301,9 @@ def scoop(pusher, scooper, down_duration, scoop_duration, lift_duration, wait_du
     pixels = annotate([densest_3d])
 
     for step in range(start_frame, start_frame+down_duration+scoop_duration+lift_duration+wait_duration):
-        np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
+        #np.save('%s/%03d.npy'%(annot_dir,step-30), np.array([pixels]))
         bpy.context.scene.frame_set(step)
-        render(step-30)
+        #render(step-30)
     return pixels
 
 def wait(wait_duration):
@@ -370,9 +376,10 @@ def take_push_action(pusher, scooper, items, push_start_2d=None, push_end_2d=Non
     wait_duration = 20
     #pixels = push(pusher, push_duration, lift_duration, furthest_2d, center_2d, hull_2d, densest_3d)
     pixels = push(pusher, down_duration, push_duration, lift_duration, wait_duration, furthest_2d, center_2d, hull_2d, densest_3d)
+    items = remove_picked_up(items)
     reset_pusher(pusher)
     reset_scooper(scooper)
-    return pixels
+    return items, pixels
 
 def take_scoop_action(pusher, scooper, items):
     densest_3d = densest_point(items)
@@ -390,10 +397,14 @@ def remove_picked_up(items):
     bpy.ops.object.select_all(action='DESELECT')
     z_lower = 0.0
     z_upper = 0.5
+    x_lower = -10
+    x_upper = 10
+    y_lower = -10
+    y_upper = 10
     remaining_items = []
     for item in items:
         x,y,z = item.matrix_world.translation
-        picked_up = (z < z_lower) or (z > z_upper)
+        picked_up = (z < z_lower) or (z > z_upper) or (x < x_lower) or (x > x_upper) or (y < y_lower) or (y > y_upper)
         if picked_up:
             item.select_set(True)
         else:
@@ -407,6 +418,7 @@ def items_state(items):
         point = item.matrix_world.translation
         points.append(point)
     points = np.array(points)
+
     if len(points) > 2:
         densest_3d = densest_point(items)
         points_2d = points[:,:2]
@@ -422,12 +434,18 @@ def items_state(items):
         furthest_2d = hull_points_2d[furthest_idx]
 
         return hull_points_2d, center_2d, furthest_2d, hull.volume, densest_3d
+
+    elif len(points) == 2:
+        start, end = points
+        return start[:-1], end[:-1], end[:-1], 0, end[:-1]
+    elif len(points) == 1:
+        end = points[0]
+        return end[:-1], end[:-1], end[:-1], 0, end[:-1]
     else:
         return np.zeros(2), np.zeros(2), np.zeros(2), 0, np.zeros(2)
 
 def densest_point(items):
     if len(items) == 1:
-        print('here priya')
         return items[0].matrix_world.translation
 
     points = []
@@ -467,14 +485,16 @@ def make_item(location=None, rotation=None):
     if rotation is None:
         rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
 
-    #bpy.ops.mesh.primitive_ico_sphere_add(radius=1, enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(0.3, 0.3, 0.3))
-    #bpy.ops.mesh.primitive_uv_sphere_add(radius=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
-    bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.2, 0.2, 0.2))
+    #bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
     item = bpy.context.object
     bpy.ops.rigidbody.object_add()
     #item.rigid_body.collision_shape = 'MESH'
     #item.rigid_body.mass = 0.5
     item.rigid_body.friction = 10
+    item.name = 'Cube'
+    item.rigid_body.linear_damping = 0.95
+    item.rigid_body.angular_damping = 0.95
     return item
 
 def make_pile(num_items, deterministic=False, settle_time=30):
@@ -501,6 +521,9 @@ def make_pile(num_items, deterministic=False, settle_time=30):
 
     for step in range(bpy.context.scene.frame_current, bpy.context.scene.frame_current + settle_time):
         bpy.context.scene.frame_set(step)
+
+    # NEW
+    items = remove_picked_up(items)
 
     return items
 

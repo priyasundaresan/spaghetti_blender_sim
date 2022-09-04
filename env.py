@@ -19,7 +19,7 @@ from gym import Env, spaces
 from render import *
 
 class SpaghettiEnv(Env):
-    def __init__(self):
+    def __init__(self, random_seed=0):
         super(SpaghettiEnv, self).__init__()
         # Define a 2-D observation space
         self.blender_render_size = (256,256,3)
@@ -37,13 +37,14 @@ class SpaghettiEnv(Env):
         self.action_ctr = 0
         self.max_action_count = 10
         self.initial_num_noodles = 0
+        self.random_seed = random_seed
     
     def reset(self, deterministic=False):
         self.action_ctr = 0
         #num_noodles = np.random.randint(5,20)
         num_noodles = 20
         self.initial_num_noodles = num_noodles
-        self.noodles = reset_sim(self.pusher, self.fork, num_noodles, deterministic=deterministic)
+        self.noodles = reset_sim(self.pusher, self.fork, num_noodles, deterministic=deterministic, random_seed=self.random_seed)
         obs = render(0)
         self.current_render = obs
         return obs
