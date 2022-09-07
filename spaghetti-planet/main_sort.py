@@ -131,9 +131,7 @@ def main():
         eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_eval()
         act_sequences.append(eval_act_seq)
         mem.append(eval_episode)
-        #save_video(eval_frames, res_dir, f'vid_{i+1}')
-        visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
-        #print(eval_episode, eval_frames, eval_metrics)
+        visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}', env.env.get_action_meanings())
         np.savez_compressed('%s/%03d.npz'%(res_dir, i), act_seq=eval_act_seq)
         try:
             summary.update(eval_metrics)
