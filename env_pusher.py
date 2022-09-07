@@ -20,7 +20,7 @@ from render_pusher import *
 from scipy.interpolate import interp1d
 
 class BimanualAcquisEnv(Env):
-    def __init__(self):
+    def __init__(self, random_seed=0):
         super(BimanualAcquisEnv, self).__init__()
         # Define a 2-D observation space
         self.blender_render_size = (256,256,3)
@@ -37,13 +37,14 @@ class BimanualAcquisEnv(Env):
         self.action_ctr = 0
         self.max_action_count = 10
         self.initial_num_items = 0
+        self.random_seed = random_seed
     
     def reset(self, deterministic=False):
         self.action_ctr = 0
         #num_noodles = np.random.randint(5,20)
         num_items = 12
         self.initial_num_items = num_items
-        self.items = reset_sim(self.pusher, self.scooper, num_items, deterministic=deterministic)
+        self.items = reset_sim(self.pusher, self.scooper, num_items, deterministic=deterministic, random_seed=self.random_seed)
         obs = render(0)
         self.current_render = obs
         return obs

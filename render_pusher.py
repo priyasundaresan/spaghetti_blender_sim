@@ -193,8 +193,9 @@ def get_coverage_pickup_stats(items):
     num_items_left = len(items)
     return coverage, num_items_left 
 
-def generate_heldout_pile_state(num_items):
-    RANDOM_SEED = 3
+def generate_heldout_pile_state(num_items, random_seed=0):
+    RANDOM_SEED = random_seed
+    print('\nHERE', random_seed)
     locations = []
     rotations = []
     for i in range(num_items):
@@ -359,11 +360,11 @@ def initialize_sim():
 
     return pusher, scooper
 
-def reset_sim(pusher, scooper, num_items, deterministic=False):
+def reset_sim(pusher, scooper, num_items, deterministic=False, random_seed=0):
     reset_pusher(pusher)
     reset_scooper(scooper)
     clear_actions_frames()
-    items = make_pile(num_items, deterministic=deterministic, settle_time=30)
+    items = make_pile(num_items, deterministic=deterministic, settle_time=30, random_seed=random_seed)
     print(bpy.context.scene.frame_current)
     return items
 
@@ -497,12 +498,12 @@ def make_item(location=None, rotation=None):
     item.rigid_body.angular_damping = 0.95
     return item
 
-def make_pile(num_items, deterministic=False, settle_time=30):
+def make_pile(num_items, deterministic=False, settle_time=30, random_seed=0):
     items = []
     bpy.ops.object.select_all(action='DESELECT')
 
     if deterministic:
-        locations, rotations = generate_heldout_pile_state(num_items)
+        locations, rotations = generate_heldout_pile_state(num_items, random_seed=random_seed)
 
     for i in range(num_items):
         if deterministic:

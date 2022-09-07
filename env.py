@@ -94,7 +94,8 @@ class SpaghettiEnv(Env):
         if done:
             clear_noodles()
 
-        action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
+        #action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
+        action_pixels = np.array(action_pixels)
         total_noodle_pickup = self.initial_num_noodles - num_noodles
         total_coverage = area
 

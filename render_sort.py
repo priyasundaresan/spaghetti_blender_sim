@@ -177,7 +177,7 @@ def make_pusher():
 
 def push(pusher, down_duration, push_duration, lift_duration, wait_duration, push_start, push_end, annot_dir='annots'):
     start_frame = bpy.context.scene.frame_current
-    #print('START_FRAME', start_frame)
+    print('\n\nHERE', push_start)
 
     push_start_2d = push_start[:2]
     push_end_2d = push_end[:2].astype('float')
@@ -284,8 +284,8 @@ def annotate(points):
         pixels.append(pixel)
     return pixels
 
-def generate_heldout_pile_state(num_items):
-    RANDOM_SEED = 3
+def generate_heldout_pile_state(num_items, random_seed=0):
+    RANDOM_SEED = random_seed
     locations = []
     rotations = []
     for i in range(num_items):
@@ -339,20 +339,20 @@ def initialize_sim():
 
     return pusher
 
-def reset_sim(pusher, num_items, deterministic=False):
+def reset_sim(pusher, num_items, deterministic=False, random_seed=0):
     reset_pusher(pusher)
     clear_actions_frames()
-    items, colors = make_pile(num_items, deterministic=deterministic, settle_time=30)
+    items, colors = make_pile(num_items, deterministic=deterministic, settle_time=30, random_seed=random_seed)
     #print(bpy.context.scene.frame_current)
     return items, colors
 
-def make_pile(num_items, deterministic=False, settle_time=30):
+def make_pile(num_items, deterministic=False, settle_time=30, random_seed=0):
     items = []
     colors = []
     bpy.ops.object.select_all(action='DESELECT')
 
     if deterministic:
-        locations, rotations = generate_heldout_pile_state(num_items)
+        locations, rotations = generate_heldout_pile_state(num_items, random_seed=random_seed)
 
     for i in range(num_items):
         if deterministic:
@@ -409,7 +409,8 @@ def make_item(location=None, rotation=None):
     if rotation is None:
         rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
 
-    bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
+    #bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
+    bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.35, 0.35, 0.35))
     item = bpy.context.object
     bpy.ops.rigidbody.object_add()
     #item.rigid_body.collision_shape = 'MESH'
@@ -476,15 +477,23 @@ def densest_point(items):
 
     return densest_point
 
-def get_action_candidates(items, colors):
+def get_pick_action_candidates(items, colors):
+    red_items = []
+    blue_items = []
 
-    red_items = [items[i] for i in range(len(items)) if colors[i] == 'red' and items[i].matrix_world.translation[2] >= 0]
-    blue_items = [items[i] for i in range(len(items)) if colors[i] == 'blue' and items[i].matrix_world.translation[2] >= 0]
+    THRESH = 3.75
+
+    for item, color in zip(items,colors):
+        dist_to_red_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - RED_RECEPTACLE_LOC)
+        dist_to_blue_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - BLUE_RECEPTACLE_LOC)
+        if dist_to_red_receptacle > THRESH and color == 'red':
+            red_items.append(item)
+        elif dist_to_blue_receptacle > THRESH and color == 'blue':
+            blue_items.append(item)
 
     if len(red_items) + len(blue_items) == 0:
-        return None, None, None, None
+        return None, None
 
-    # for pick place
     if len(red_items):
         red_closest_point, red_closest_dist, red_closest_item = closest_point(red_items, RED_RECEPTACLE_LOC)
 
@@ -505,6 +514,15 @@ def get_action_candidates(items, colors):
         pick_point = red_closest_point if len(red_items) else blue_closest_point
         place_point = RED_RECEPTACLE_LOC if len(red_items) else BLUE_RECEPTACLE_LOC
 
+    return pick_item, place_point
+
+def get_push_action_candidates(items, colors):
+    red_items = [items[i] for i in range(len(items)) if colors[i] == 'red' and items[i].matrix_world.translation[2] >= 0]
+    blue_items = [items[i] for i in range(len(items)) if colors[i] == 'blue' and items[i].matrix_world.translation[2] >= 0]
+
+    if len(red_items) + len(blue_items) == 0:
+        return None, None
+
     # for push
     if len(red_items) > len(blue_items):
         push_candidate_items = red_items
@@ -515,7 +533,48 @@ def get_action_candidates(items, colors):
         push_start = densest_point(push_candidate_items)
         push_end = BLUE_RECEPTACLE_LOC
 
-    return pick_item, place_point, push_start, push_end
+    return push_start, push_end
+
+#def get_action_candidates(items, colors):
+#
+#    red_items = [items[i] for i in range(len(items)) if colors[i] == 'red' and items[i].matrix_world.translation[2] >= 0]
+#    blue_items = [items[i] for i in range(len(items)) if colors[i] == 'blue' and items[i].matrix_world.translation[2] >= 0]
+#
+#    if len(red_items) + len(blue_items) == 0:
+#        return None, None, None, None
+#
+#    # for pick place
+#    if len(red_items):
+#        red_closest_point, red_closest_dist, red_closest_item = closest_point(red_items, RED_RECEPTACLE_LOC)
+#
+#    if len(blue_items):
+#        blue_closest_point, blue_closest_dist, blue_closest_item = closest_point(blue_items, BLUE_RECEPTACLE_LOC)
+#
+#    if len(red_items) and len(blue_items):
+#        if (red_closest_dist < blue_closest_dist):
+#            pick_item= red_closest_item
+#            pick_point = red_closest_point
+#            place_point = RED_RECEPTACLE_LOC
+#        else:
+#            pick_item= blue_closest_item
+#            pick_point = blue_closest_point
+#            place_point = BLUE_RECEPTACLE_LOC
+#    else:
+#        pick_item= red_closest_item if len(red_items) else blue_closest_item
+#        pick_point = red_closest_point if len(red_items) else blue_closest_point
+#        place_point = RED_RECEPTACLE_LOC if len(red_items) else BLUE_RECEPTACLE_LOC
+#
+#    # for push
+#    if len(red_items) > len(blue_items):
+#        push_candidate_items = red_items
+#        push_start = densest_point(push_candidate_items)
+#        push_end = RED_RECEPTACLE_LOC
+#    else:
+#        push_candidate_items = blue_items
+#        push_start = densest_point(push_candidate_items)
+#        push_end = BLUE_RECEPTACLE_LOC
+#
+#    return pick_item, place_point, push_start, push_end
 
 def get_reward_stats(items, colors):
 

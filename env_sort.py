@@ -18,7 +18,7 @@ from render_sort import *
 from scipy.interpolate import interp1d
 
 class BlockSortEnv(Env):
-    def __init__(self):
+    def __init__(self, random_seed=0):
         super(BlockSortEnv, self).__init__()
         # Define a 2-D observation space
         self.blender_render_size = (256,256,3)
@@ -35,12 +35,13 @@ class BlockSortEnv(Env):
         self.action_ctr = 0
         self.max_action_count = 10
         self.initial_num_items = 0
+        self.random_seed = random_seed
     
     def reset(self, deterministic=False):
         self.action_ctr = 0
         num_items = 10
         self.initial_num_items = num_items
-        self.items, self.colors = reset_sim(self.pusher, num_items, deterministic=deterministic)
+        self.items, self.colors = reset_sim(self.pusher, num_items, deterministic=deterministic, random_seed=self.random_seed)
         obs = render(0)
         self.current_render = obs
         return obs
@@ -67,15 +68,19 @@ class BlockSortEnv(Env):
         assert self.action_space.contains(action), "Invalid Action"
 
         red_correct_prev, red_incorrect_prev, blue_correct_prev, blue_incorrect_prev = get_reward_stats(self.items, self.colors)
-        pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
+        #pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
+        pick_item, place_point = get_pick_action_candidates(self.items, self.colors)
+        push_start, push_end = get_push_action_candidates(self.items, self.colors)
 
-        if action == 0:
+        if action == 0 or push_start is None:
             action_pixels = take_pick_place_action(pick_item, place_point)
         elif action == 1:
             action_pixels = take_push_action(self.pusher, push_start, push_end, self.items)
 
         red_correct, red_incorrect, blue_correct, blue_incorrect = get_reward_stats(self.items, self.colors)
-        pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
+        #pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
+        pick_item, place_point = get_pick_action_candidates(self.items, self.colors)
+        push_start, push_end = get_push_action_candidates(self.items, self.colors)
 
         correct_reward = (red_correct - red_correct_prev) + (blue_correct - blue_correct_prev)
         incorrect_reward = (red_incorrect - red_incorrect_prev) + (blue_incorrect - blue_incorrect_prev)
@@ -95,7 +100,8 @@ class BlockSortEnv(Env):
         if done:
             clear_items()
 
-        action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
+        #action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
+        action_pixels = np.array(action_pixels)
         return obs, reward, done, (action_pixels, 0.0, 0.0)
 
 if __name__ == '__main__':
