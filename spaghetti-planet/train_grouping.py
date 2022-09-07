@@ -3,7 +3,7 @@ import os
 sys.path.append(os.getcwd())
 sys.path.append(os.path.join(os.getcwd(), '..'))
 
-#import pdb
+import pdb
 import torch
 from tqdm import trange
 from functools import partial
@@ -12,7 +12,8 @@ from collections import defaultdict
 from torch.distributions import Normal, kl
 from torch.distributions.kl import kl_divergence
 
-from env_pusher import BimanualAcquisEnv
+from env import SpaghettiEnv
+from grouping_env import GroupingEnv
 from utils import *
 from memory import *
 from rssm_model import *
@@ -20,7 +21,7 @@ from rssm_policy import *
 from rollout_generator import RolloutGenerator
 
 #def train(memory, rssm, optimizer, device, N=32, H=50, beta=1.0, grads=False):
-def train(memory, rssm, optimizer, device, N=32, H=1, beta=1.0, grads=False):
+def train(memory, rssm, optimizer, device, N=32, H=8, beta=1.0, grads=False):
     """
     Training implementation as indicated in:
     Learning Latent Dynamics for Planning from Pixels
@@ -79,42 +80,33 @@ def train(memory, rssm, optimizer, device, N=32, H=1, beta=1.0, grads=False):
 
 
 def main():
-    argv = sys.argv
-    argv = argv[argv.index("--") + 1:]  # get all args after "--"
-    random_seed = int(argv[-1])
-    env = BimanualAcquisEnv(random_seed=random_seed)
+    env = GroupingEnv()
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
     print('action size', env.action_size)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     rssm_model = RecurrentStateSpaceModel(env.action_size).to(device)
     optimizer = torch.optim.Adam(rssm_model.parameters(), lr=1e-3, eps=1e-4)
-
     policy = RSSMPolicy(
         rssm_model, 
         planning_horizon=10,
-        num_candidates=1024,
-        num_iterations=1,
-        top_candidates=1,
+        num_candidates=1000,
+        num_iterations=10,
+        top_candidates=100,
         device=device
     )
-
     rollout_gen = RolloutGenerator(
         env,
         device,
         policy=policy,
         episode_gen=lambda : Episode(partial(postprocess_img, depth=5)),
-        max_episode_steps=env.env.max_action_count,
+        max_episode_steps=100,
     )
     mem = Memory(100)
     mem.append(rollout_gen.rollout_n(1, random_policy=True))
-    res_dir = 'results_randomseed_%d/'%random_seed
+    res_dir = 'results/'
     summary = TensorBoardMetrics(f'{res_dir}/')
-    #for i in trange(100, desc='Epoch', leave=False):
-    act_sequences = []
-    #for i in trange(100, desc='Epoch', leave=False):
     for i in trange(100, desc='Epoch', leave=False):
-        print('\nEPOCH: %d'%i)
         metrics = {}
         for _ in trange(150, desc='Iter ', leave=False):
             train_metrics = train(mem, rssm_model.train(), optimizer, device)
@@ -126,25 +118,17 @@ def main():
         
         summary.update(metrics)
         mem.append(rollout_gen.rollout_once(explore=True))
-        eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_eval()
-        act_sequences.append(eval_act_seq)
+        eval_episode, eval_frames, eval_metrics = rollout_gen.rollout_eval()
         mem.append(eval_episode)
         #save_video(eval_frames, res_dir, f'vid_{i+1}')
         visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
-        np.savez_compressed('%s/%03d.npz'%(res_dir, i), act_seq=eval_act_seq)
-        try:
-            summary.update(eval_metrics)
-        except:
-            continue
+        #print(eval_episode, eval_frames, eval_metrics)
+        #summary.update(eval_metrics)
 
         if (i + 1) % 25 == 0:
             torch.save(rssm_model.state_dict(), f'{res_dir}/ckpt_{i+1}.pth')
 
-    np.save(f'{res_dir}/eval_act_seqs.npy', np.array(act_sequences)) 
-    print('DONE')
-    exit()
-
-    #pdb.set_trace()
+    pdb.set_trace()
 
 if __name__ == '__main__':
     main()

@@ -79,7 +79,11 @@ def train(memory, rssm, optimizer, device, N=32, H=1, beta=1.0, grads=False):
 
 
 def main():
-    env = BlockSortEnv()
+    argv = sys.argv
+    argv = argv[argv.index("--") + 1:]  # get all args after "--"
+    random_seed = int(argv[-1])
+
+    env = BlockSortEnv(random_seed=random_seed)
     #env = OneHotAction(env)
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
     print('action size', env.action_size)
@@ -106,7 +110,7 @@ def main():
     )
     mem = Memory(100)
     mem.append(rollout_gen.rollout_n(1, random_policy=True))
-    res_dir = 'results/'
+    res_dir = 'results_randomseed_%d/'%random_seed
     summary = TensorBoardMetrics(f'{res_dir}/')
     #for i in trange(100, desc='Epoch', leave=False):
     act_sequences = []
@@ -130,7 +134,7 @@ def main():
         #save_video(eval_frames, res_dir, f'vid_{i+1}')
         visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
         #print(eval_episode, eval_frames, eval_metrics)
-        np.savez_compressed('results/%03d.npz'%(i), act_seq=eval_act_seq)
+        np.savez_compressed('%s/%03d.npz'%(res_dir, i), act_seq=eval_act_seq)
         try:
             summary.update(eval_metrics)
         except:
@@ -141,6 +145,7 @@ def main():
 
     np.save(f'{res_dir}/eval_act_seqs.npy', np.array(act_sequences)) 
     print('DONE')
+    exit()
 
     #pdb.set_trace()
 

@@ -82,37 +82,6 @@ def save_video(frames, path, name):
         writer.write(frame)
     writer.release()
 
-#def visualize_episode(frames, episode, path, name):
-#    mapping = {0: "Group", 1:"Acquire"}
-#    #mapping = {0: "Pick", 1:"Push"}
-#    frames = (frames*255).clip(0, 255).astype('uint8').transpose(0, 2, 3, 1)
-#    _, H, W, _ = frames.shape
-#    writer = cv2.VideoWriter(
-#        str(pathlib.Path(path)/f'{name}.mp4'),
-#        cv2.VideoWriter_fourcc(*'mp4v'), 0.5, (W*2, H*2), True
-#    )
-#    for i, frame in enumerate(frames[..., ::-1]):
-#        #print(i, len(frames))
-#        #action = episode.u[i].argmax()
-#        action = episode.u[i]
-#        reward = episode.r[i]
-#
-#        action_pixels = episode.action_pixels[i]
-#        vis = frame.copy()
-#        H,W,C = vis.shape
-#        if len(action_pixels)>1:
-#            u1,v1 = action_pixels.astype(int)[0]
-#            u2,v2 = action_pixels.astype(int)[1]
-#            cv2.line(vis, (u1, H-v1), (u2, H-v2), (255,0,0), 1)
-#        else:
-#            u1,v1 = action_pixels.astype(int)[0]
-#            cv2.circle(vis, (u1, H-v1), 2, (255,0,0), -1)
-#        vis = cv2.resize(vis, (W*2, H*2))
-#        cv2.putText(vis, 'Action: %s, Reward: %.2f'%(mapping[action], reward), (10,15), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,0), 1, cv2.LINE_AA)
-#
-#        writer.write(vis)
-#    writer.release()
-
 def visualize_episode(frames, episode, path, name):
     mapping = {0: "Group", 1:"Acquire"}
     frames = (frames*255).clip(0, 255).astype('uint8').transpose(0, 2, 3, 1)
