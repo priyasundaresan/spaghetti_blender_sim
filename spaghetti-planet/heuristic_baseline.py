@@ -11,6 +11,7 @@ from collections import defaultdict
 from torch.distributions import Normal, kl
 from torch.distributions.kl import kl_divergence
 from env import SpaghettiEnv
+from env_pusher import BimanualAcquisEnv
 from utils import *
 from memory import *
 from rollout_generator import RolloutGenerator
@@ -19,7 +20,8 @@ def main(policy):
     argv = sys.argv
     argv = argv[argv.index("--") + 1:]  # get all args after "--"
     random_seed = int(argv[-1])
-    env = SpaghettiEnv(random_seed=random_seed)
+    #env = SpaghettiEnv(random_seed=random_seed)
+    env = BimanualAcquisEnv(random_seed=random_seed)
 
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
 
