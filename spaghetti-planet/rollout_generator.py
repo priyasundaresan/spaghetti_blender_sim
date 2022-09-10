@@ -104,8 +104,9 @@ class RolloutGenerator:
                 act = torch.Tensor([0.0]) if (t in [0,1,2,4,5,6,8]) else torch.Tensor([1.0])
             elif policy=='heuristic':
                 print('\ntotal_coverage', total_coverage)
-                #act = torch.Tensor([0.0]) if t==0 or total_coverage > 13 else torch.Tensor([1.0])
-                act = torch.Tensor([0.0]) if t==0 or total_coverage > 14.5 else torch.Tensor([1.0])
+                #act = torch.Tensor([0.0]) if t==0 or total_coverage > 14.5 else torch.Tensor([1.0]) # spaghetti
+                #act = torch.Tensor([0.0]) if t==0 or total_coverage > 2 else torch.Tensor([1.0]) # scooping
+                act = torch.Tensor([0.0]) if t==0 or total_coverage > 3 else torch.Tensor([1.0]) # scooping
 
             if t == self.max_episode_steps-1:
                 # always twirl last
