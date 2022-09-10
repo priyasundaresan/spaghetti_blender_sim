@@ -99,14 +99,11 @@ def visualize_episode(frames, episode, path, name, mapping=None):
         vis = frame.copy()
         vis = cv2.resize(vis, (256*2, 256))
         vis = cv2.flip(vis, 0)
-        #print('\n\nhere', vis.shape, action_pixels)
-        #vis = cv2.resize(vis, (W*2, H*2))
         H,W,C = vis.shape
 
         if len(action_pixels)>1:
             u1,v1 = action_pixels.astype(int)[0]
             u2,v2 = action_pixels.astype(int)[1]
-            #cv2.line(vis, (u1, v1), (u2, v2), (255,0,0), 2)
             cv2.arrowedLine(vis, (u1, v1), (u2, v2), (255,0,0), 2)
         else:
             u1,v1 = action_pixels.astype(int)[0]

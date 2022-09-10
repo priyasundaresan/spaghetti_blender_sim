@@ -131,7 +131,7 @@ class RolloutGenerator:
         metrics['eval/noodle_pickup'] = eps_pickup
         return eps, np.stack(frames), metrics, act_seq
 
-    def rollout_eval(self):
+    def rollout_eval(self, hardcode_last_action=True):
         assert self.policy is not None, 'Policy is None!!'
         self.policy.reset()
         eps = self.episode_gen()
@@ -158,7 +158,7 @@ class RolloutGenerator:
                     self.policy.h, self.policy.s
                 ).cpu().flatten().item())
 
-            if t == self.max_episode_steps-1:
+            if t == self.max_episode_steps-1 and hardcode_last_action:
                 # always twirl last
                 act = torch.Tensor([1.0])
 
@@ -176,7 +176,7 @@ class RolloutGenerator:
             eps_pickup = total_noodle_pickup
             obs = nobs
             if terminal or t == self.max_episode_steps - 1:
-                eps.append(self.env.render(), act, reward, terminal, action_pixels)
+                eps.append(obs, act, reward, terminal, action_pixels)
                 break
         eps.terminate(nobs)
         metrics['eval/episode_reward'] = eps_reward

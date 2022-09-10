@@ -92,10 +92,11 @@ def main():
     rssm_model = RecurrentStateSpaceModel(env.action_size).to(device)
     optimizer = torch.optim.Adam(rssm_model.parameters(), lr=1e-3, eps=1e-4)
 
+    planning_horizon = 8
     policy = RSSMPolicy(
         rssm_model, 
-        planning_horizon=10,
-        num_candidates=1024,
+        planning_horizon=planning_horizon,
+        num_candidates=2**planning_horizon,
         num_iterations=1,
         top_candidates=1,
         device=device
@@ -128,7 +129,7 @@ def main():
         
         summary.update(metrics)
         mem.append(rollout_gen.rollout_once(explore=True))
-        eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_eval()
+        eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_eval(hardcode_last_action=False)
         act_sequences.append(eval_act_seq)
         mem.append(eval_episode)
         visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}', env.env.get_action_meanings())

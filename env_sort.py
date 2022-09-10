@@ -33,7 +33,7 @@ class BlockSortEnv(Env):
         self.pusher = initialize_sim()
         self.current_render = None
         self.action_ctr = 0
-        self.max_action_count = 10
+        self.max_action_count = 8
         self.initial_num_items = 0
         self.random_seed = random_seed
     
@@ -83,26 +83,30 @@ class BlockSortEnv(Env):
         push_start, push_end = get_push_action_candidates(self.items, self.colors)
 
         correct_reward = (red_correct - red_correct_prev) + (blue_correct - blue_correct_prev)
-        incorrect_reward = (red_incorrect - red_incorrect_prev) + (blue_incorrect - blue_incorrect_prev)
+        incorrect_reward = (red_incorrect_prev - red_incorrect) + (blue_incorrect_prev - blue_incorrect)
 
-        reward = 1*correct_reward + -10*incorrect_reward
+        reward = 1*correct_reward + 1*incorrect_reward 
+        if (correct_reward + incorrect_reward) == 0:
+            reward = -10
 
-        #print(bpy.context.scene.frame_current)
         obs = render(0)
         self.current_render = obs
         self.action_ctr += 1
 
+        counted_items = red_correct + blue_correct + red_incorrect + blue_incorrect
+
         print('\naction %d: %s, '%(self.action_ctr, self.get_action_meanings()[int(action)]), 'reward: %f, '%reward, \
                                    '\nred_correct: %d'%red_correct, 'red_incorrect: %d'%red_incorrect, \
-                                   'blue_correct: %d'%blue_correct, 'blue_incorrect: %d'%blue_incorrect)
+                                   'blue_correct: %d'%blue_correct, 'blue_incorrect: %d'%blue_incorrect, 'num counted items: %d'%(counted_items))
 
-        done = (self.action_ctr >= self.max_action_count) or (pick_item is None)
+        #done = (self.action_ctr >= self.max_action_count) or (pick_item is None)
+        done = (self.action_ctr >= self.max_action_count) or (red_correct + blue_correct == len(self.items))
         if done:
             clear_items()
 
         #action_pixels = np.array(action_pixels)//(self.blender_render_size[0]/self.observation_shape[0])
         action_pixels = np.array(action_pixels)
-        return obs, reward, done, (action_pixels, 0.0, 0.0)
+        return obs, reward, done, (action_pixels, red_correct + blue_correct, 0.0)
 
 if __name__ == '__main__':
     env = BlockSortEnv()
