@@ -35,14 +35,15 @@ class BimanualAcquisEnv(Env):
         self.pusher, self.scooper = initialize_sim()
         self.current_render = None
         self.action_ctr = 0
-        self.max_action_count = 10
+        #self.max_action_count = 10
+        self.max_action_count = 6
         self.initial_num_items = 0
         self.random_seed = random_seed
     
     def reset(self, deterministic=False):
         self.action_ctr = 0
         #num_noodles = np.random.randint(5,20)
-        num_items = 12
+        num_items = 15
         self.initial_num_items = num_items
         self.items = reset_sim(self.pusher, self.scooper, num_items, deterministic=deterministic, random_seed=self.random_seed)
         obs = render(0)

@@ -199,11 +199,10 @@ def generate_heldout_pile_state(num_items, random_seed=0):
     locations = []
     rotations = []
     for i in range(num_items):
-        np.random.seed(num_items+i+RANDOM_SEED)
-        location = np.random.uniform(-1.1,1.1,3)
-        #location[2] = np.random.uniform(0.25,1.00)
+        #np.random.seed(num_items+i+RANDOM_SEED)
+        location = np.random.uniform(-1.4,1.4,3)
         location[2] = np.random.uniform(0.15,0.25)
-        np.random.seed(num_items+i+RANDOM_SEED)
+        #np.random.seed(num_items+i+RANDOM_SEED)
         rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
         locations.append(location)
         rotations.append(rotation)
@@ -213,7 +212,10 @@ def push(pusher, down_duration, push_duration, lift_duration, wait_duration, pus
     start_frame = bpy.context.scene.frame_current
     
     offset = push_end_2d - push_start_2d
-    angle = np.arctan(offset[1]/offset[0])
+    if offset[0] == 0:
+        angle = np.pi/2
+    else:
+        angle = np.arctan(offset[1]/offset[0])
 
     #push_start_2d -= offset*0.15
     push_start_2d -= offset*0.05
@@ -479,19 +481,17 @@ def delete_objs(objs):
     bpy.ops.object.delete()
 
 def make_item(location=None, rotation=None):
-    np.random.seed()
+    #np.random.seed()
     if location is None:
         location = np.random.uniform(-1.1,1.1,3)
         location[2] = np.random.uniform(0.25,1.00)
     if rotation is None:
         rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
 
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.2, 0.2, 0.2))
-    #bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
+    #bpy.ops.mesh.primitive_uv_sphere_add(radius=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.2, 0.2, 0.2))
+    bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
     item = bpy.context.object
     bpy.ops.rigidbody.object_add()
-    #item.rigid_body.collision_shape = 'MESH'
-    #item.rigid_body.mass = 0.5
     item.rigid_body.friction = 10
     item.name = 'Cube'
     item.rigid_body.linear_damping = 0.95

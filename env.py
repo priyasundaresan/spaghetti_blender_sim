@@ -35,7 +35,8 @@ class SpaghettiEnv(Env):
         self.pusher, self.fork = initialize_sim()
         self.current_render = None
         self.action_ctr = 0
-        self.max_action_count = 10
+        #self.max_action_count = 10
+        self.max_action_count = 8
         self.initial_num_noodles = 0
         self.random_seed = random_seed
     

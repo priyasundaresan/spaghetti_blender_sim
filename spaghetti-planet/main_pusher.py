@@ -90,10 +90,11 @@ def main():
     rssm_model = RecurrentStateSpaceModel(env.action_size).to(device)
     optimizer = torch.optim.Adam(rssm_model.parameters(), lr=1e-3, eps=1e-4)
 
+    planning_horizon = 6
     policy = RSSMPolicy(
         rssm_model, 
-        planning_horizon=10,
-        num_candidates=1024,
+        planning_horizon=planning_horizon,
+        num_candidates=2**planning_horizon,
         num_iterations=1,
         top_candidates=1,
         device=device
@@ -130,7 +131,7 @@ def main():
         act_sequences.append(eval_act_seq)
         mem.append(eval_episode)
         #save_video(eval_frames, res_dir, f'vid_{i+1}')
-        visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
+        visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}', env.env.get_action_meanings())
         np.savez_compressed('%s/%03d.npz'%(res_dir, i), act_seq=eval_act_seq)
         try:
             summary.update(eval_metrics)

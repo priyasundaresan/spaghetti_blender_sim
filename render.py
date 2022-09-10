@@ -199,17 +199,17 @@ def generate_heldout_noodle_state(num_noodles, random_seed=0):
     locations = []
     rotations = []
     for i in range(num_noodles):
-        np.random.seed(num_noodles+i+RANDOM_SEED)
+        #np.random.seed(num_noodles+i+RANDOM_SEED)
         location = np.random.uniform(-1.1,1.1,3)
         location[2] = np.random.uniform(0.25,1.00)
-        np.random.seed(num_noodles+i+RANDOM_SEED)
+        #np.random.seed(num_noodles+i+RANDOM_SEED)
         rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
         locations.append(location)
         rotations.append(rotation)
     return locations, rotations
 
 def make_noodle(location=None, rotation=None):
-    np.random.seed()
+    #np.random.seed()
     if location is None:
         location = np.random.uniform(-1.1,1.1,3)
         location[2] = np.random.uniform(0.25,1.00)

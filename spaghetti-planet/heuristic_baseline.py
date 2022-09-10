@@ -20,8 +20,11 @@ def main(policy):
     argv = sys.argv
     argv = argv[argv.index("--") + 1:]  # get all args after "--"
     random_seed = int(argv[-1])
-    #env = SpaghettiEnv(random_seed=random_seed)
-    env = BimanualAcquisEnv(random_seed=random_seed)
+
+    set_seed_everywhere(random_seed)
+
+    env = SpaghettiEnv(random_seed=random_seed)
+    #env = BimanualAcquisEnv(random_seed=random_seed)
 
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
 

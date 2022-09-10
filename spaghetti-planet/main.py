@@ -1,4 +1,5 @@
 import sys
+import random
 import os
 sys.path.append(os.getcwd())
 sys.path.append(os.path.join(os.getcwd(), '..'))
@@ -83,6 +84,8 @@ def main():
     argv = argv[argv.index("--") + 1:]  # get all args after "--"
     random_seed = int(argv[-1])
 
+    set_seed_everywhere(random_seed)
+
     env = SpaghettiEnv(random_seed=random_seed)
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
 
@@ -92,7 +95,7 @@ def main():
     rssm_model = RecurrentStateSpaceModel(env.action_size).to(device)
     optimizer = torch.optim.Adam(rssm_model.parameters(), lr=1e-3, eps=1e-4)
     
-    planning_horizon = 10
+    planning_horizon = 8
 
     policy = RSSMPolicy(
         rssm_model, 
@@ -131,7 +134,8 @@ def main():
         eval_episode, eval_frames, eval_metrics, eval_act_seq = rollout_gen.rollout_eval()
         act_sequences.append(eval_act_seq)
         mem.append(eval_episode)
-        visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
+        #visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}')
+        visualize_episode(eval_frames, eval_episode, res_dir, f'vid_{i+1}', env.env.get_action_meanings())
         np.savez_compressed('%s/%03d.npz'%(res_dir, i), act_seq=eval_act_seq)
         try:
             summary.update(eval_metrics)

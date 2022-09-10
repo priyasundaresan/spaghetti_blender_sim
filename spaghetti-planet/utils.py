@@ -12,7 +12,13 @@ from collections import defaultdict
 
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.utils import make_grid, save_image
+import random
 
+def set_seed_everywhere(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
 def to_tensor_obs(image):
     """
