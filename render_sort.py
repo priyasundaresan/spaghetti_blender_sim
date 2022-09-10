@@ -22,8 +22,8 @@ BLUE_RECEPTACLE_LOC = (-5,0,0)
 def add_camera_light():
     bpy.ops.object.light_add(type='SUN', radius=1, location=(0,0,0))
     #bpy.ops.object.camera_add(location=(0,0,8), rotation=(0,0,0))
-    bpy.ops.object.camera_add(location=(0,0,18), rotation=(0,0,0))
-    #bpy.ops.object.camera_add(location=(0,-5,20), rotation=(np.deg2rad(18.5),0,0))
+    #bpy.ops.object.camera_add(location=(0,0,18), rotation=(0,0,0))
+    bpy.ops.object.camera_add(location=(0,-5,20), rotation=(np.deg2rad(18.5),0,0))
     bpy.context.scene.camera = bpy.context.object
 
 def clear_scene():
@@ -177,7 +177,6 @@ def make_pusher():
 
 def push(pusher, down_duration, push_duration, lift_duration, wait_duration, push_start, push_end, annot_dir='annots'):
     start_frame = bpy.context.scene.frame_current
-    print('\n\nHERE', push_start)
 
     push_start_2d = push_start[:2]
     push_end_2d = push_end[:2].astype('float')
@@ -410,7 +409,7 @@ def make_item(location=None, rotation=None):
         rotation = np.array([np.random.uniform(-0.4, 0.4),np.random.uniform(-0.4, 0.4),np.random.uniform(0, np.pi)])
 
     #bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
-    bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.35, 0.35, 0.35))
+    bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=location, rotation=rotation, scale=(0.3, 0.3, 0.3))
     item = bpy.context.object
     bpy.ops.rigidbody.object_add()
     #item.rigid_body.collision_shape = 'MESH'
@@ -517,8 +516,21 @@ def get_pick_action_candidates(items, colors):
     return pick_item, place_point
 
 def get_push_action_candidates(items, colors):
-    red_items = [items[i] for i in range(len(items)) if colors[i] == 'red' and items[i].matrix_world.translation[2] >= 0]
-    blue_items = [items[i] for i in range(len(items)) if colors[i] == 'blue' and items[i].matrix_world.translation[2] >= 0]
+    #red_items = [items[i] for i in range(len(items)) if colors[i] == 'red' and items[i].matrix_world.translation[2] >= 0]
+    #blue_items = [items[i] for i in range(len(items)) if colors[i] == 'blue' and items[i].matrix_world.translation[2] >= 0]
+
+    red_items = []
+    blue_items = []
+
+    THRESH = 3.75
+
+    for item, color in zip(items,colors):
+        dist_to_red_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - RED_RECEPTACLE_LOC)
+        dist_to_blue_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - BLUE_RECEPTACLE_LOC)
+        if dist_to_red_receptacle > THRESH and color == 'red':
+            red_items.append(item)
+        elif dist_to_blue_receptacle > THRESH and color == 'blue':
+            blue_items.append(item)
 
     if len(red_items) + len(blue_items) == 0:
         return None, None
@@ -597,11 +609,17 @@ def get_reward_stats(items, colors):
                 red_correct += 1
             else:
                 blue_incorrect += 1
-        if dist_to_blue_receptacle < THRESH:
+        elif dist_to_blue_receptacle < THRESH:
             if color == 'blue':
                 blue_correct += 1
             else:
                 red_incorrect += 1
+        else:
+            if color == 'blue':
+                blue_incorrect += 1
+            else:
+                red_incorrect += 1
+
     return red_correct, red_incorrect, blue_correct, blue_incorrect
 
 def remove_picked_up(items, colors):
