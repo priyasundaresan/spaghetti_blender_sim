@@ -89,21 +89,33 @@ def save_video(frames, path, name):
     writer.release()
 
 def visualize_episode(frames, episode, path, name, mapping=None):
-    if mapping is None:
-        mapping = {0: "Group", 1:"Acquire"}
     frames = (frames*255).clip(0, 255).astype('uint8').transpose(0, 2, 3, 1)
     _, H, W, _ = frames.shape
-    writer = cv2.VideoWriter(
-        str(pathlib.Path(path)/f'{name}.mp4'),
-        cv2.VideoWriter_fourcc(*'mp4v'), 0.5, (256*2, 256), True
-    )
+
+    #if W == 134:
+    if W == 64*2:
+        writer = cv2.VideoWriter(
+            str(pathlib.Path(path)/f'{name}.mp4'),
+            cv2.VideoWriter_fourcc(*'mp4v'), 0.5, (256*2, 256), True
+        )
+    else:
+        writer = cv2.VideoWriter(
+            str(pathlib.Path(path)/f'{name}.mp4'),
+            cv2.VideoWriter_fourcc(*'mp4v'), 0.5, (256, 256), True
+        )
+
     for i, frame in enumerate(frames[..., ::-1]):
-        action = episode.u[i]
         reward = episode.r[i]
 
+        action = episode.u[i]
         action_pixels = episode.action_pixels[i]
+
         vis = frame.copy()
-        vis = cv2.resize(vis, (256*2, 256))
+        H1,W1,_ = vis.shape
+        if W1 == 64*2:
+            vis = cv2.resize(vis, (256*2, 256))
+        else:
+            vis = cv2.resize(vis, (256, 256))
         vis = cv2.flip(vis, 0)
         H,W,C = vis.shape
 

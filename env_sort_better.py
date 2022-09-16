@@ -14,7 +14,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 from gym import Env, spaces
-from render_sort import *
+from render_sort_better import *
 from scipy.interpolate import interp1d
 
 class BlockSortEnv(Env):
@@ -33,14 +33,14 @@ class BlockSortEnv(Env):
         self.pusher = initialize_sim()
         self.current_render = None
         self.action_ctr = 0
-        self.max_action_count = 5
+        self.max_action_count = 6
         self.initial_num_items = 0
         self.random_seed = random_seed
     
     def reset(self, deterministic=False):
         self.action_ctr = 0
         #num_items = 10
-        num_items = 15
+        num_items = 12
         self.initial_num_items = num_items
         self.items, self.colors = reset_sim(self.pusher, num_items, deterministic=deterministic, random_seed=self.random_seed)
         obs = render(0)
@@ -69,7 +69,7 @@ class BlockSortEnv(Env):
         assert self.action_space.contains(action), "Invalid Action"
 
         red_correct_prev, red_incorrect_prev, blue_correct_prev, blue_incorrect_prev = get_reward_stats(self.items, self.colors)
-        #pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
+
         pick_item, place_point = get_pick_action_candidates(self.items, self.colors)
         push_start, push_end = get_push_action_candidates(self.items, self.colors)
 
@@ -81,19 +81,14 @@ class BlockSortEnv(Env):
         red_correct, red_incorrect, blue_correct, blue_incorrect = get_reward_stats(self.items, self.colors)
         if self.action_ctr == 0:
             self.initial_num_correct = red_correct + blue_correct
-        #pick_item, place_point, push_start, push_end = get_action_candidates(self.items, self.colors)
+
         pick_item, place_point = get_pick_action_candidates(self.items, self.colors)
         push_start, push_end = get_push_action_candidates(self.items, self.colors)
 
         correct_reward = (red_correct - red_correct_prev) + (blue_correct - blue_correct_prev)
         incorrect_reward = (red_incorrect_prev - red_incorrect) + (blue_incorrect_prev - blue_incorrect)
 
-        reward = (correct_reward + incorrect_reward)
-        if (correct_reward + incorrect_reward) == 0:
-            reward = -10
-
-        #if correct_reward == 0 and incorrect_reward == 0:
-        #    reward = -5
+        reward = (correct_reward + incorrect_reward)**2
 
         obs = render(0)
         self.current_render = obs

@@ -473,74 +473,46 @@ def densest_point(items):
 
     return densest_point
 
-def get_pick_action_candidates(items, colors):
-    red_items = []
-    blue_items = []
+def get_pick_action_candidates(items, colors, color):
+    items = []
+
+    RECEPTACLE_LOC = RED_RECEPTACLE_LOC if color == 'red' else BLUE_RECEPTACLE_LOC
 
     THRESH = 3.75
-    for item, color in zip(items,colors):
-        dist_to_red_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - RED_RECEPTACLE_LOC)
-        dist_to_blue_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - BLUE_RECEPTACLE_LOC)
-        if dist_to_red_receptacle > THRESH and color == 'red':
-            red_items.append(item)
-        elif dist_to_blue_receptacle > THRESH and color == 'blue':
-            blue_items.append(item)
+    for item in zip(items,colors):
+        dist_to_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - RECEPTACLE_LOC)
+        if dist_to_receptacle > THRESH and color == color:
+            items.append(item)
 
-    if len(red_items) + len(blue_items) == 0:
+    if len(items) == 0
         return None, None
 
-    if len(red_items):
-        red_closest_point, red_closest_dist, red_closest_item = closest_point(red_items, RED_RECEPTACLE_LOC)
+    closest_point, closest_dist, closest_item = closest_point(items, RECEPTACLE_LOC)
 
-    if len(blue_items):
-        blue_closest_point, blue_closest_dist, blue_closest_item = closest_point(blue_items, BLUE_RECEPTACLE_LOC)
-
-    if len(red_items) and len(blue_items):
-        if (red_closest_dist < blue_closest_dist):
-            pick_item= red_closest_item
-            pick_point = red_closest_point
-            place_point = RED_RECEPTACLE_LOC
-        else:
-            pick_item= blue_closest_item
-            pick_point = blue_closest_point
-            place_point = BLUE_RECEPTACLE_LOC
-    else:
-        pick_item= red_closest_item if len(red_items) else blue_closest_item
-        pick_point = red_closest_point if len(red_items) else blue_closest_point
-        place_point = RED_RECEPTACLE_LOC if len(red_items) else BLUE_RECEPTACLE_LOC
+    pick_item= closest_item
+    pick_point = closest_point
+    place_point = RECEPTACLE_LOC
 
     return pick_item, place_point
 
-def get_push_action_candidates(items, colors):
-    #red_items = [items[i] for i in range(len(items)) if colors[i] == 'red' and items[i].matrix_world.translation[2] >= 0]
-    #blue_items = [items[i] for i in range(len(items)) if colors[i] == 'blue' and items[i].matrix_world.translation[2] >= 0]
+def get_push_action_candidates(items, colors, color):
+    items = []
 
-    red_items = []
-    blue_items = []
+    RECEPTACLE_LOC = RED_RECEPTACLE_LOC if color == 'red' else BLUE_RECEPTACLE_LOC
 
     THRESH = 3.75
+    for item in zip(items,colors):
+        dist_to_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - RECEPTACLE_LOC)
+        if dist_to_receptacle > THRESH and color == color:
+            items.append(item)
 
-    for item, color in zip(items,colors):
-        dist_to_red_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - RED_RECEPTACLE_LOC)
-        dist_to_blue_receptacle = np.linalg.norm(np.array(item.matrix_world.translation) - BLUE_RECEPTACLE_LOC)
-        if dist_to_red_receptacle > THRESH and color == 'red':
-            red_items.append(item)
-        elif dist_to_blue_receptacle > THRESH and color == 'blue':
-            blue_items.append(item)
-
-    if len(red_items) + len(blue_items) == 0:
+    if len(items) == 0
         return None, None
 
     # for push
-    if len(red_items) > len(blue_items):
-        push_candidate_items = red_items
-        push_start = densest_point(push_candidate_items)
-        push_end = RED_RECEPTACLE_LOC
-    else:
-        push_candidate_items = blue_items
-        push_start = densest_point(push_candidate_items)
-        push_end = BLUE_RECEPTACLE_LOC
-
+    push_candidate_items = items
+    push_start = densest_point(push_candidate_items)
+    push_end = RECEPTACLE_LOC
     return push_start, push_end
 
 def get_reward_stats(items, colors):

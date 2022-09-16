@@ -10,33 +10,17 @@ if __name__ == '__main__':
     import os
     Display().start()
 
-    #os.system('blender -P main_sort.py -- random_seed 1')
-    #os.system('blender -P random_baseline.py -- random_seed 1')
-    #os.system('blender -P main_sort.py -- random_seed 2')
-    #os.system('blender -P random_baseline.py -- random_seed 2')
-    #os.system('blender -P main_sort.py -- random_seed 3')
-    #os.system('blender -P random_baseline.py -- random_seed 3')
-    #os.system('blender -P main_sort.py -- random_seed 4')
-    #os.system('blender -P random_baseline.py -- random_seed 4')
-    #os.system('blender -P main_sort.py -- random_seed 5')
-    #os.system('blender -P random_baseline.py -- random_seed 5')
-
     os.system('blender -P main.py -- random_seed 1')
-    os.system('blender -P random_baseline.py -- random_seed 1')
     os.system('blender -P heuristic_baseline.py -- random_seed 1')
 
     os.system('blender -P main.py -- random_seed 2')
-    os.system('blender -P random_baseline.py -- random_seed 2')
     os.system('blender -P heuristic_baseline.py -- random_seed 2')
 
     os.system('blender -P main.py -- random_seed 3')
-    os.system('blender -P random_baseline.py -- random_seed 3')
     os.system('blender -P heuristic_baseline.py -- random_seed 3')
 
     os.system('blender -P main.py -- random_seed 4')
-    os.system('blender -P random_baseline.py -- random_seed 4')
     os.system('blender -P heuristic_baseline.py -- random_seed 4')
 
     os.system('blender -P main.py -- random_seed 5')
-    os.system('blender -P random_baseline.py -- random_seed 5')
     os.system('blender -P heuristic_baseline.py -- random_seed 5')

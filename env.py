@@ -43,7 +43,8 @@ class SpaghettiEnv(Env):
     def reset(self, deterministic=False):
         self.action_ctr = 0
         #num_noodles = np.random.randint(5,20)
-        num_noodles = 20
+        #num_noodles = 20
+        num_noodles = 10
         self.initial_num_noodles = num_noodles
         self.noodles = reset_sim(self.pusher, self.fork, num_noodles, deterministic=deterministic, random_seed=self.random_seed)
         obs = render(0)

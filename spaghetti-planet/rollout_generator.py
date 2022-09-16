@@ -105,31 +105,34 @@ class RolloutGenerator:
             elif policy=='heuristic':
                 print('\ntotal_coverage', total_coverage)
                 #act = torch.Tensor([0.0]) if t==0 or total_coverage > 14.5 else torch.Tensor([1.0]) # spaghetti
-                #act = torch.Tensor([0.0]) if t==0 or total_coverage > 2 else torch.Tensor([1.0]) # scooping
-                act = torch.Tensor([0.0]) if t==0 or total_coverage > 3 else torch.Tensor([1.0]) # scooping
+                #act = torch.Tensor([0.0]) if t==0 or total_coverage > 3 else torch.Tensor([1.0]) # scooping
+                act = torch.Tensor([1.0]) # sorting
 
-            if t == self.max_episode_steps-1:
-                # always twirl last
-                act = torch.Tensor([1.0])
+            # UNCOMMENT
+            #if t == self.max_episode_steps-1:
+            #    # always twirl last
+            #    act = torch.Tensor([1.0])
 
             nobs, reward, terminal, (action_pixels, total_noodle_pickup, total_coverage) = self.env.step(act)
 
-            #reward = self.discount**t * reward # priya new
-
             act_seq.append([act.item(), total_noodle_pickup])
-            frames.append(make_grid([nobs + 0.5], nrow=1).numpy())
+            frames.append(make_grid([nobs + 0.5], nrow=1, padding=0).numpy())
             eps.append(obs, act, reward, terminal, action_pixels)
             print('\neval step %d:'%t, act.item(), reward, terminal, total_noodle_pickup)
             act_r.append(reward)
             eps_reward += reward
             eps_pickup = total_noodle_pickup
             obs = nobs
-            if terminal:
-                eps.append(self.env.render(), act, reward, terminal, action_pixels)
+            if terminal or t == self.max_episode_steps - 1:
+                eps.append(obs, act, reward, terminal, action_pixels)
                 break
+            #if terminal:
+            #    eps.append(self.env.render(), act, reward, terminal, action_pixels)
+            #    break
         eps.terminate(nobs)
         metrics['eval/episode_reward'] = eps_reward
         metrics['eval/noodle_pickup'] = eps_pickup
+        eps.action_pixels = eps.action_pixels[1:]
         return eps, np.stack(frames), metrics, act_seq
 
     def rollout_eval(self, hardcode_last_action=True):
@@ -154,7 +157,7 @@ class RolloutGenerator:
                     self.policy.s
                 ).squeeze().cpu().clamp_(-0.5, 0.5)
                 rec_losses.append(((obs - dec).abs()).sum().item())
-                frames.append(make_grid([obs + 0.5, dec + 0.5], nrow=2).numpy())
+                frames.append(make_grid([obs + 0.5, dec + 0.5], nrow=2, padding=0).numpy())
                 pred_r.append(self.policy.rssm.pred_reward(
                     self.policy.h, self.policy.s
                 ).cpu().flatten().item())

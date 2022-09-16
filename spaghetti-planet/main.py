@@ -118,7 +118,8 @@ def main():
     res_dir = 'results_randomseed_%d/'%random_seed
     summary = TensorBoardMetrics(f'{res_dir}/')
     act_sequences = []
-    for i in trange(100, desc='Epoch', leave=False):
+    #for i in trange(100, desc='Epoch', leave=False):
+    for i in trange(10, desc='Epoch', leave=False):
         print('\nEPOCH: %d'%i)
         metrics = {}
         for _ in trange(150, desc='Iter ', leave=False):

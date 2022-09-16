@@ -83,6 +83,8 @@ def main():
     argv = argv[argv.index("--") + 1:]  # get all args after "--"
     random_seed = int(argv[-1])
 
+    set_seed_everywhere(random_seed)
+
     env = BlockSortEnv(random_seed=random_seed)
     #env = OneHotAction(env)
     env = TorchImageEnvWrapper(env, bit_depth=5, act_rep=1)
@@ -116,7 +118,8 @@ def main():
     #for i in trange(100, desc='Epoch', leave=False):
     act_sequences = []
     #for i in trange(100, desc='Epoch', leave=False):
-    for i in trange(100, desc='Epoch', leave=False):
+    #for i in trange(100, desc='Epoch', leave=False):
+    for i in trange(50, desc='Epoch', leave=False):
         print('\nEPOCH: %d'%i)
         metrics = {}
         for _ in trange(150, desc='Iter ', leave=False):
